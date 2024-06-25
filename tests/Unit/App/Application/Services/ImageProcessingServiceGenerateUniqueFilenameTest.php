@@ -7,7 +7,7 @@ namespace App\Application\Services;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
-class ImageProcessingServiceTest extends TestCase
+class ImageProcessingServiceGenerateUniqueFilenameTest extends TestCase
 {
     private ImageProcessingService $service;
 

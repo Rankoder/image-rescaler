@@ -7,7 +7,7 @@ namespace App\Application\Services;
 use App\Domain\ValueObjects\ImageValueObject;
 use PHPUnit\Framework\TestCase;
 
-class ImageProcessingServiceTest extends TestCase
+class ImageProcessingServiceResizeImageTest extends TestCase
 {
     private ImageProcessingService $service;
     private string $testImagePath;
