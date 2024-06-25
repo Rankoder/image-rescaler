@@ -40,7 +40,7 @@ cd image-rescaler
     docker-compose up --build
     ```
 
-4. Sprawdź, czy aplikacja działa, odwiedzając `http://localhost:8080/public/index.php` w przeglądarce. Powinna być taka wiadomość.
+4. Sprawdź, czy aplikacja działa, odwiedzając `http://localhost:8080/public/upload` w przeglądarce. Powinna być taka wiadomość.
 ```{"status":"error","message":"Invalid request parameters"}```
 
 ## Instrukcja używania CLI
