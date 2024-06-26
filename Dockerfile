@@ -24,7 +24,7 @@ COPY . /var/www/html/
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Install application dependencies
-RUN if [ -f composer.lock ]; then composer update; else composer install; fi
+RUN composer install
 
 # Update Composer autoloader
 RUN composer dump-autoload

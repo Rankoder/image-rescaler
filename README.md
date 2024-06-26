@@ -9,39 +9,41 @@ Aplikacja do przeskalowywania obrazów i przesyłania ich do wybranych przestrze
 - Docker Compose
 - Composer
 
-## Konfiguracja
-
-### Klonowanie repozytorium
-
-```bash
-git clone https://github.com/your-repository/image-rescaler.git
-cd image-rescaler
-```
-
-# Image Rescaler
-
 ## Wymagania wstępne
 
 1. Docker
 2. Docker Compose
 
+## Sekcja dla leniwych
+
+```shell
+composer run build            // Buduje projekt
+composer run create-storage   // Tworzy folder storage
+composer run ir-up            // Uruchamia obraz z dockera aplikacji
+composer run install          // Instaluje zależności z composer.json
+composer run run-tests-all    // Uruchamia wszystkie testy
+```
+
 ## Instrukcja uruchomienia aplikacji
 
-1. Sklonuj repozytorium:
-    ```sh
-    git clone https://github.com/Rankoder/image-rescaler.git
-    cd image-rescaler
-    ```
-
-2. Utwórz plik `.env` na podstawie `.env.example` i wypełnij odpowiednie wartości:
+1. Utwórz plik `.env` na podstawie `.env.example` i wypełnij odpowiednie wartości:
+2.  Utwórz folder storage w głównym katalogu projektu:
+   ```shell
+   mkdir storage
+   ```
 
 3. Zbuduj i uruchom kontenery Docker:
     ```sh
     docker-compose up --build
+    docker-compose up
     ```
-
-4. Sprawdź, czy aplikacja działa, odwiedzając `http://localhost:8080/public/upload` w przeglądarce. Powinna być taka wiadomość.
+4. Zainstaluj zależności:
+   ```shell
+   docker-compose exec web composer install
+   ```
+5Sprawdź, czy aplikacja działa, odwiedzając `http://localhost:8080/public/upload` w przeglądarce. Powinna być taka wiadomość.
 ```{"status":"error","message":"Invalid request parameters"}```
+
 
 ## Instrukcja używania CLI
 

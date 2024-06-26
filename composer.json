@@ -4,6 +4,13 @@
             "App\\": "src/"
         }
     },
+    "scripts": {
+        "build":  "docker-compose up --build -d",
+        "ir-up":  "docker-compose up -d",
+        "install":  "docker-compose exec web composer install",
+        "create-storage":  "mkdir storage",
+        "run-tests-all":  "docker-compose exec web vendor/bin/phpunit tests/"
+    },
     "require": {
         "aws/aws-sdk-php": "^3.314",
         "kunalvarma05/dropbox-php-sdk": "^0.4.2",
