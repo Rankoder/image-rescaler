@@ -22,7 +22,6 @@ class LocalStorageServiceTest extends TestCase
         // Zamockuj właściwość storagePath za pomocą refleksji
         $reflection = new \ReflectionClass($this->service);
         $property = $reflection->getProperty('storagePath');
-        $property->setAccessible(true);
         $property->setValue($this->service, $this->mockStoragePath);
 
         // Upewnij się, że katalog storage istnieje

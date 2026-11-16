@@ -30,7 +30,6 @@ class ImageProcessingServiceResizeImageTest extends TestCase
         $backgroundColor = imagecolorallocate($image, 255, 255, 255);
         imagefill($image, 0, 0, $backgroundColor);
         imagejpeg($image, $this->testImagePath, 90);
-        imagedestroy($image);
     }
 
     public function testResizeImage(): void

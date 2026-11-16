@@ -34,11 +34,9 @@ class S3StorageServiceTest extends TestCase
 
         $reflection = new \ReflectionClass($service);
         $s3ClientProperty = $reflection->getProperty('s3Client');
-        $s3ClientProperty->setAccessible(true);
         $s3ClientProperty->setValue($service, $this->s3ClientMock);
 
         $bucketProperty = $reflection->getProperty('bucket');
-        $bucketProperty->setAccessible(true);
         $bucketProperty->setValue($service, 'image-rescaler');
 
         return $service;
