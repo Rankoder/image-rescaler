@@ -1,0 +1,7 @@
+.git
+.idea
+vendor
+.env
+storage
+.phpunit.result.cache
+*.pdf
