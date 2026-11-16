@@ -6,7 +6,7 @@ A plain-PHP REST API and CLI tool that scales an image down to a thumbnail and s
 
 - Docker with Compose v2 (`docker compose`)
 
-PHP 8.3, Composer and all extensions run inside the container; nothing else is needed on the host.
+PHP 8.5, Composer and all extensions run inside the container; nothing else is needed on the host.
 
 ## Quick start
 
@@ -22,6 +22,12 @@ Check that it responds:
 ```sh
 curl -X POST http://localhost:8080/upload
 # {"status":"error","message":"Invalid request parameters"}
+```
+
+PHP errors and warnings are never shown in responses; they go to the container log:
+
+```sh
+docker compose logs -f web
 ```
 
 ## Configuration
@@ -101,6 +107,7 @@ src/
 └── Infrastructure/   HTTP controller
 public/index.php      HTTP entry point → routes.php
 docker/entrypoint.sh  container start: dependencies, storage dir, Apache
+docker/php.ini        PHP settings: errors to the log, not to responses
 tests/                Unit and Functional (PHPUnit)
 ```
 
