@@ -5,3 +5,4 @@ vendor
 storage
 .phpunit.result.cache
 *.pdf
+.php-cs-fixer.cache
