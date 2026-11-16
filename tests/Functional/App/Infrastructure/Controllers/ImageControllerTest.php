@@ -46,7 +46,6 @@ class ImageControllerTest extends TestCase
         ];
         foreach ($properties as $property => $mock) {
             $reflectedProperty = $reflection->getProperty($property);
-            $reflectedProperty->setAccessible(true);
             $reflectedProperty->setValue($this->controller, $mock);
         }
 
@@ -158,7 +157,6 @@ class ImageControllerTest extends TestCase
         $backgroundColor = imagecolorallocate($image, 255, 255, 255);
         imagefill($image, 0, 0, $backgroundColor);
         imagejpeg($image, $path);
-        imagedestroy($image);
     }
 
     protected function tearDown(): void

@@ -1,4 +1,4 @@
-FROM php:8.3-apache
+FROM php:8.5-apache
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
@@ -18,6 +18,8 @@ RUN a2enmod rewrite
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
     && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+
+COPY docker/php.ini "$PHP_INI_DIR/conf.d/app.ini"
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer

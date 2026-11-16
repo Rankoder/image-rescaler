@@ -32,7 +32,6 @@ class DropboxStorageServiceTest extends TestCase
         $service = new DropboxStorageService();
         $reflection = new \ReflectionClass($service);
         $dropboxProperty = $reflection->getProperty('dropbox');
-        $dropboxProperty->setAccessible(true);
         $dropboxProperty->setValue($service, $this->dropboxMock);
 
         return $service;

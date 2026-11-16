@@ -13,6 +13,7 @@ A plain-PHP application that scales an uploaded image down to a thumbnail and st
 | `public/index.php` → `routes.php` → `ImageController` | API entry point (bramus/router) |
 | `config/` | S3 config from environment variables (`dropbox.php` exists but is unused; Dropbox reads `getenv` directly) |
 | `docker/entrypoint.sh` | runs on container start: `composer install`, creates `storage/`, then Apache |
+| `docker/php.ini` | PHP settings: errors go to the container log, never into responses |
 | `tests/Unit/`, `tests/Functional/` | PHPUnit; directories mirror the namespace (`tests/Unit/App/…`) |
 
 ## Commands
@@ -23,6 +24,7 @@ PHP and Composer run only in Docker, in the `web` service.
 docker compose up --build -d                    # build and start (localhost:8080, API at POST /upload)
 docker compose exec web vendor/bin/phpunit      # all tests
 docker compose exec web vendor/bin/phpunit --testsuite "Unit Tests"
+docker compose logs -f web                      # PHP errors and warnings
 ```
 
 ## Git
