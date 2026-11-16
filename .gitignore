@@ -2,3 +2,5 @@
 /vendor/
 .env
 .phpunit.result.cache
+.idea/
+.claude/settings.local.json
