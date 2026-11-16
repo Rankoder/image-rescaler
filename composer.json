@@ -5,11 +5,9 @@
         }
     },
     "scripts": {
-        "build":  "docker-compose up --build -d",
-        "ir-up":  "docker-compose up -d",
-        "install":  "docker-compose exec web composer install",
-        "create-storage":  "mkdir storage",
-        "run-tests-all":  "docker-compose exec web vendor/bin/phpunit tests/"
+        "build": "docker compose up --build -d",
+        "ir-up": "docker compose up -d",
+        "run-tests-all": "docker compose exec web vendor/bin/phpunit"
     },
     "require": {
         "aws/aws-sdk-php": "^3.314",

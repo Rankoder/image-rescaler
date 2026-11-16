@@ -1,106 +1,111 @@
 # Image Rescaler
 
-Aplikacja do przeskalowywania obrazów i przesyłania ich do wybranych przestrzeni do przechowywania plików, takich jak lokalny system plików, S3, Dropbox i OneDrive.
+A plain-PHP REST API and CLI tool that scales an image down to a thumbnail and stores it in the chosen storage: local filesystem, Amazon S3 or Dropbox.
 
-## Wymagania
+## Requirements
 
-- PHP 8.3
-- Docker
-- Docker Compose
-- Composer
+- Docker with Compose v2 (`docker compose`)
 
-## Wymagania wstępne
+PHP 8.3, Composer and all extensions run inside the container; nothing else is needed on the host.
 
-1. Docker
-2. Docker Compose
+## Quick start
 
-## Sekcja dla leniwych
-
-```shell
-composer run build            // Buduje projekt
-composer run create-storage   // Tworzy folder storage
-composer run ir-up            // Uruchamia obraz z dockera aplikacji
-composer run install          // Instaluje zależności z composer.json
-composer run run-tests-all    // Uruchamia wszystkie testy
+```sh
+cp .env-example .env          # then fill in the values, see Configuration
+docker compose up --build -d
 ```
 
-## Instrukcja uruchomienia aplikacji
+On start the container installs Composer dependencies and creates the `storage/` directory. The API is available at `http://localhost:8080`.
 
-1. Utwórz plik `.env` na podstawie `.env.example` i wypełnij odpowiednie wartości:
-2.  Utwórz folder storage w głównym katalogu projektu:
-   ```shell
-   mkdir storage
-   ```
+Check that it responds:
 
-3. Zbuduj i uruchom kontenery Docker:
-    ```sh
-    docker-compose up --build
-    docker-compose up
-    ```
-4. Zainstaluj zależności:
-   ```shell
-   docker-compose exec web composer install
-   ```
-5Sprawdź, czy aplikacja działa, odwiedzając `http://localhost:8080/public/upload` w przeglądarce. Powinna być taka wiadomość.
-```{"status":"error","message":"Invalid request parameters"}```
+```sh
+curl -X POST http://localhost:8080/upload
+# {"status":"error","message":"Invalid request parameters"}
+```
 
+## Configuration
 
-## Instrukcja używania CLI
+All settings come from `.env`:
 
-1. W kontenerze `web` uruchom poniższą komendę, aby przeskalować obraz i przesłać go do wybranego serwisu:
-   ```
-   -f: Ścieżka pliku (w przykładzie to ścieżka do folderu storage)
-   -s: Nazwa serwisu: s3, dropbox, local
-   -w: Szerokość obrazu w px
-   -h: Wysokość obrazu w px
-   -o: Nazwa wyjściowa
-   ```
+| Variable | Description |
+|----------|-------------|
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | S3 credentials |
+| `AWS_REGION` | S3 region, e.g. `eu-central-1` |
+| `AWS_BUCKET_NAME` | target bucket |
+| `DROPBOX_ACCESS_TOKEN` | Dropbox API token |
+| `ALLOWED_IMAGE_TYPES` | comma-separated MIME types, e.g. `image/jpeg,image/png` |
+| `MAX_FILE_SIZE` | maximum upload size in bytes |
+| `MAX_IMAGE_WIDTH`, `MAX_IMAGE_HEIGHT` | upper limit for the requested dimensions |
 
-    ```sh
-    docker-compose exec web php /var/www/html/src/Application/CLI/resize.php -f <ścieżka_do_pliku> -s <service> -w <max_width> -h <max_height> [-o <output_filename>]
-    ```
+Only the variables of the storage you use need real values.
 
-   Przykład:
-    ```sh
-    docker-compose exec web php /var/www/html/src/Application/CLI/resize.php -f /var/www/html/storage/example.jpg -s local -w 200 -h 300 newName
-    ```
+## API
 
-## Instrukcja uruchomienia testów
+### `POST /upload`
 
-1. Aby uruchomić testy jednostkowe i funkcjonalne, użyj poniższej komendy w kontenerze `web`:
-    ```sh
-    docker-compose exec web vendor/bin/phpunit tests/  
-    ```
+`multipart/form-data` fields:
 
-2. Aby uruchomić konkretne testy, użyj poniższej komendy, podając ścieżkę do pliku testowego:
-    ```sh
-    docker-compose exec web vendor/bin/phpunit tests/Functional/Services/LocalStorageServiceTest.php
-    ```
+| Field | Required | Description |
+|-------|----------|-------------|
+| `file` | yes | image to scale |
+| `max_width` | yes | target width in px |
+| `max_height` | yes | target height in px |
+| `service` | no | `local` (default), `s3` or `dropbox` |
+| `output_filename` | no | name of the stored file; a `_v<n>` suffix is added to keep names unique |
 
-## Korzystanie z API
+```sh
+curl -X POST http://localhost:8080/upload \
+  -F "file=@/path/to/image.jpg" \
+  -F "max_width=200" \
+  -F "max_height=150" \
+  -F "service=local" \
+  -F "output_filename=thumbnail"
+```
 
-1. Aby przesłać obraz za pomocą API, użyj narzędzia takiego jak Postman lub cURL, aby wysłać POST request na `http://localhost:8080`.
+Success (`200`):
 
-2. Przykładowy request:
-    ```sh
-    curl -X POST http://localhost:8080 \
-    -F "file=@/path/to/your/image.jpg" \
-    -F "service=local" \
-    -F "max_width=200" \
-    -F "max_height=300" \
-    -F "output_filename=rescaled_image"
-    ```
+```json
+{"status": "success", "path": "thumbnail_v1.jpg", "url": "http://localhost:8080/thumbnail_v1.jpg"}
+```
 
-3. Otrzymasz odpowiedź zawierającą status i URL do przesłanego obrazu:
-    ```json
-    {
-        "status": "success",
-        "path": "storage/images/rescaled_image_v1.jpg",
-        "url": "url: http://localhost:8080/rescaled_image_v1.jpg"
-    }
-    ```
+Errors return `{"status": "error", "message": "..."}` with `400` for missing or invalid fields and `500` for everything else.
 
+## CLI
 
+```sh
+docker compose exec web php src/Application/CLI/resize.php \
+  -f <file_path> -w <max_width> -h <max_height> [-s <service>] [-o <output_filename>]
+```
 
+| Option | Description |
+|--------|-------------|
+| `-f` | path to the image inside the container, e.g. `/var/www/html/storage/photo.jpg` |
+| `-w`, `-h` | target width and height in px |
+| `-s` | `local` (default), `s3` or `dropbox` |
+| `-o` | name of the stored file |
 
+## Tests
 
+```sh
+docker compose exec web vendor/bin/phpunit                          # all tests
+docker compose exec web vendor/bin/phpunit --testsuite "Unit Tests"  # or "Functional Tests"
+```
+
+## Project structure
+
+```
+src/
+├── Domain/           interfaces and value objects
+├── Application/      image processing, validation, storage services; CLI entry point
+└── Infrastructure/   HTTP controller
+public/index.php      HTTP entry point → routes.php
+docker/entrypoint.sh  container start: dependencies, storage dir, Apache
+tests/                Unit and Functional (PHPUnit)
+```
+
+## Known limitations
+
+- The image is resized to exactly `max_width` × `max_height`; the aspect ratio is not preserved.
+- The `url` returned for `local` storage is not served by the web server.
+- The CLI does not validate the input file the way the API does.
