@@ -27,6 +27,7 @@ docker compose exec web vendor/bin/phpunit --testsuite "Unit Tests"
 
 ## Git
 
+- Branch od `master` i PR do `master`; bez pośredniego `develop`.
 - Branch: `<type>/ir-<nr>-<short-desc>`, np. `docs/ir-02-claude-md`. Typy: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
 - Jeden numer to jeden task, czyli jeden branch i jeden PR. Numery rosną kolejno i nigdy się nie powtarzają. Poprawka w trakcie taska to kolejny commit na tym samym branchu.
 - Commity po angielsku w Conventional Commits: `type(scope): imperative summary`, np. `fix(storage): reject path traversal in output filename`.
