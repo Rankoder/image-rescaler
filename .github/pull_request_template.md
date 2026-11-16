@@ -10,3 +10,7 @@
 git switch <branch>
 docker compose up --build -d
 ```
+
+## Verified
+
+<!-- Fresh clone of the branch, `docker compose build --no-cache`, tests, anything else that was run, with results. -->
