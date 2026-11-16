@@ -32,6 +32,7 @@ docker compose exec web vendor/bin/phpunit --testsuite "Unit Tests"
 - One number is one task: one branch, one PR. Numbers increase and are never reused. A fix during a task is another commit on the same branch.
 - Conventional Commits: `type(scope): imperative summary`, e.g. `fix(storage): reject path traversal in output filename`.
 - Konrad commits and pushes.
+- Before a PR: clean run from a fresh clone of the branch (`docker compose build --no-cache`), then everything the README describes, tests included. Findings outside the task's scope go to the task that owns that area, not into this branch.
 
 ## Code standard
 
