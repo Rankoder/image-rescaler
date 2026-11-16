@@ -5,9 +5,22 @@
         }
     },
     "scripts": {
-        "build": "docker compose up --build -d",
-        "ir-up": "docker compose up -d",
-        "run-tests-all": "docker compose exec web vendor/bin/phpunit"
+        "test": "phpunit",
+        "test:unit": "phpunit --testsuite 'Unit Tests'",
+        "test:functional": "phpunit --testsuite 'Functional Tests'",
+        "phpstan": "phpstan analyse --no-progress",
+        "cs": "php-cs-fixer check",
+        "cs:fix": "php-cs-fixer fix",
+        "check": ["@cs", "@phpstan", "@test"]
+    },
+    "scripts-descriptions": {
+        "test": "Run all tests",
+        "test:unit": "Run unit tests",
+        "test:functional": "Run functional tests",
+        "phpstan": "Run static analysis",
+        "cs": "Check code style without changing files",
+        "cs:fix": "Fix code style",
+        "check": "Code style, static analysis and tests, as before a PR"
     },
     "require": {
         "aws/aws-sdk-php": "^3.314",
