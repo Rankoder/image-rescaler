@@ -1,31 +1,10 @@
 # image-rescaler
 
-A plain-PHP application that scales an uploaded image down to a thumbnail and stores it in the chosen storage: local filesystem, S3 or Dropbox. Two entry points: REST API and CLI.
+What the app does, its structure and all commands are in the README, imported here:
 
-## Structure
+@README.md
 
-| Path | Contents |
-|------|----------|
-| `src/Domain/` | interfaces and value objects, no dependencies on other layers |
-| `src/Application/` | services: processing, validation, storage |
-| `src/Application/CLI/resize.php` | CLI entry point |
-| `src/Infrastructure/` | HTTP controllers |
-| `public/index.php` → `routes.php` → `ImageController` | API entry point (bramus/router) |
-| `config/` | S3 config from environment variables (`dropbox.php` exists but is unused; Dropbox reads `getenv` directly) |
-| `docker/entrypoint.sh` | runs on container start: `composer install`, creates `storage/`, then Apache |
-| `docker/php.ini` | PHP settings: errors go to the container log, never into responses |
-| `tests/Unit/`, `tests/Functional/` | PHPUnit; directories mirror the namespace (`tests/Unit/App/…`) |
-
-## Commands
-
-PHP and Composer run only in Docker, in the `web` service.
-
-```sh
-docker compose up --build -d                    # build and start (localhost:8080, API at POST /upload)
-docker compose exec web vendor/bin/phpunit      # all tests
-docker compose exec web vendor/bin/phpunit --testsuite "Unit Tests"
-docker compose logs -f web                      # PHP errors and warnings
-```
+PHP and Composer run only in Docker, in the `web` service. Before a PR, `composer check` must pass.
 
 ## Git
 
@@ -44,7 +23,7 @@ The current code does not meet all of these rules yet. New and changed code foll
 
 Kept:
 - `declare(strict_types=1)` in every file,
-- PSR-4 (`App\` → `src/`) and the Domain / Application / Infrastructure layers.
+- PSR-4 (`App\` → `src/`) and the Domain / Application / Infrastructure layers; Domain depends on no other layer.
 
 Added:
 - formatting per PER-CS,
