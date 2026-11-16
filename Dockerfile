@@ -14,24 +14,25 @@ RUN apt-get update && apt-get install -y \
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
-# Set working directory
-WORKDIR /var/www/html/
-
-# Copy application source
-COPY . /var/www/html/
-
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Install application dependencies
-RUN composer install
+# The project dir is bind-mounted in dev with a different owner; let git (used by Composer) trust it
+RUN git config --global --add safe.directory /var/www/html
 
-# Update Composer autoloader
-RUN composer dump-autoload
+WORKDIR /var/www/html/
 
-# Set permissions
-RUN mkdir -p /var/www/html/storage \
-    && chown -R www-data:www-data /var/www/html/storage \
-    && chmod -R 755 /var/www/html/storage
+# Dependencies first, so this layer is cached until composer.json or composer.lock changes
+COPY composer.json composer.lock ./
+RUN composer install --no-interaction --no-scripts --no-autoloader
+
+COPY . /var/www/html/
+RUN composer dump-autoload --optimize
+
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 80
+
+ENTRYPOINT ["entrypoint.sh"]
+CMD ["apache2-foreground"]
