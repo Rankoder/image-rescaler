@@ -1,59 +1,61 @@
 # image-rescaler
 
-Aplikacja w czystym PHP, która skaluje wgrany obrazek do miniatury i zapisuje go w wybranej przestrzeni: lokalnie, w S3 albo w Dropboxie. Dwa wejścia: REST API i CLI.
+A plain-PHP application that scales an uploaded image down to a thumbnail and stores it in the chosen storage: local filesystem, S3 or Dropbox. Two entry points: REST API and CLI.
 
-## Struktura
+## Structure
 
-| Ścieżka | Co tam jest |
-|---------|-------------|
-| `src/Domain/` | interfejsy i value objecty, bez zależności od reszty |
-| `src/Application/` | serwisy: przetwarzanie, walidacja, zapis |
-| `src/Application/CLI/resize.php` | wejście CLI |
-| `src/Infrastructure/` | kontrolery HTTP |
-| `public/index.php` → `routes.php` → `ImageController` | wejście API (bramus/router) |
-| `config/` | konfiguracja S3 i Dropboxa ze zmiennych środowiskowych |
-| `tests/Unit/`, `tests/Functional/` | PHPUnit; katalogi odwzorowują `src/` |
+| Path | Contents |
+|------|----------|
+| `src/Domain/` | interfaces and value objects, no dependencies on other layers |
+| `src/Application/` | services: processing, validation, storage |
+| `src/Application/CLI/resize.php` | CLI entry point |
+| `src/Infrastructure/` | HTTP controllers |
+| `public/index.php` → `routes.php` → `ImageController` | API entry point (bramus/router) |
+| `config/` | S3 config from environment variables (`dropbox.php` exists but is unused; Dropbox reads `getenv` directly) |
+| `tests/Unit/`, `tests/Functional/` | PHPUnit; directories mirror the namespace (`tests/Unit/App/…`) |
 
-## Komendy
+## Commands
 
-PHP i Composer uruchamiamy tylko w Dockerze, w serwisie `web`.
+PHP and Composer run only in Docker, in the `web` service.
 
 ```sh
-docker compose up --build -d                    # build i start (localhost:8080)
-docker compose exec web composer install        # zależności; potrzebne po buildzie, bo montowany katalog przykrywa vendor/ z obrazu
-docker compose exec web vendor/bin/phpunit      # wszystkie testy
+docker compose up --build -d                    # build and start (localhost:8080)
+docker compose exec web composer install        # dependencies; needed after build, the mounted project dir hides vendor/ from the image
+docker compose exec web vendor/bin/phpunit      # all tests
 docker compose exec web vendor/bin/phpunit --testsuite "Unit Tests"
 ```
 
 ## Git
 
-- Branch od `master` i PR do `master`; bez pośredniego `develop`.
-- Branch: `<type>/ir-<nr>-<short-desc>`, np. `docs/ir-02-claude-md`. Typy: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
-- Jeden numer to jeden task, czyli jeden branch i jeden PR. Numery rosną kolejno i nigdy się nie powtarzają. Poprawka w trakcie taska to kolejny commit na tym samym branchu.
-- Commity po angielsku w Conventional Commits: `type(scope): imperative summary`, np. `fix(storage): reject path traversal in output filename`.
-- Commity i push robi Konrad.
+- Branch off `master`, PR into `master`; no intermediate `develop`.
+- Branch name: `<type>/ir-<nr>-<short-desc>`, e.g. `docs/ir-02-claude-md`. Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
+- One number is one task: one branch, one PR. Numbers increase and are never reused. A fix during a task is another commit on the same branch.
+- Conventional Commits: `type(scope): imperative summary`, e.g. `fix(storage): reject path traversal in output filename`.
+- Konrad commits and pushes.
 
-## Standard kodu
+## Code standard
 
-Kod, nazwy i README po angielsku.
+Everything in the repo is in English: code, names, commits, docs.
 
-Zostaje:
-- `declare(strict_types=1)` w każdym pliku,
-- PSR-4 (`App\` → `src/`) i podział na warstwy Domain / Application / Infrastructure.
+The current code does not meet all of these rules yet. New and changed code follows them; the rest is cleaned up in dedicated refactor tasks, not along the way.
 
-Dochodzi:
-- formatowanie według PER-CS,
-- klasy `final`, chyba że dziedziczenie jest zaplanowane,
-- promocja właściwości w konstruktorze i `readonly` wszędzie, gdzie stan się nie zmienia,
-- enumy zamiast stringów z ustalonym zbiorem wartości (np. rodzaj przestrzeni),
-- zależności wstrzykiwane przez konstruktor; żadnego `new` serwisów ani czytania `.env` w środku klas,
-- żadnych docblocków powtarzających sygnaturę; komentarz tylko tam, gdzie kod nie powie „dlaczego”,
-- typ pliku sprawdzany po zawartości (MIME), nie po rozszerzeniu; nazwy i ścieżki od użytkownika zawsze walidowane.
+Kept:
+- `declare(strict_types=1)` in every file,
+- PSR-4 (`App\` → `src/`) and the Domain / Application / Infrastructure layers.
 
-## README modułów
+Added:
+- formatting per PER-CS,
+- classes are `final` unless inheritance is intended,
+- constructor property promotion and `readonly` wherever state does not change,
+- enums instead of strings with a fixed set of values (e.g. storage type),
+- dependencies injected through the constructor; no `new` of services and no `.env` reads inside classes,
+- no docblocks that repeat the signature; a comment only where the code cannot say "why",
+- file type checked by content (MIME), not by extension; user-supplied names and paths always validated.
 
-Moduł po przebudowie dostaje własny `README.md` (po angielsku): cel, publiczne API, zależności, jak testować. Przed pracą w module najpierw czytam jego README.
+## Module READMEs
 
-## Dokumentacja na bieżąco
+Each module gets its own `README.md` once rebuilt: purpose, public API, dependencies, how to test. Read a module's README before working in it.
 
-Zmiana, która unieważnia ten plik albo README, poprawia je w tym samym tasku.
+## Docs stay current
+
+A change that invalidates this file or a README updates it in the same task.
