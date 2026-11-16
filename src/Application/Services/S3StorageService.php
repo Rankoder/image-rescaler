@@ -71,7 +71,7 @@ class S3StorageService extends AbstractStorageService implements StorageServiceI
             'https://%s.s3.%s.amazonaws.com/%s',
             getenv('AWS_BUCKET_NAME'),
             getenv('AWS_REGION'),
-            $filePath
+            $filePath,
         );
     }
 }

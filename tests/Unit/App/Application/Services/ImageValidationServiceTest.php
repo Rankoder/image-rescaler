@@ -58,26 +58,26 @@ class ImageValidationServiceTest extends TestCase
                 ['name' => 'image.jpg', 'tmp_name' => __DIR__ . '/test_image.jpg'],
                 4000,
                 3000,
-                null
+                null,
             ],
             'invalid file type' => [
                 ['name' => 'image.gif', 'tmp_name' => __DIR__ . '/test_image.gif'],
                 4000,
                 3000,
-                "Invalid image file type: gif. Allowed types are: jpeg, png, jpg"
+                "Invalid image file type: gif. Allowed types are: jpeg, png, jpg",
             ],
             'file size exceeded' => [
                 ['name' => 'image.jpg', 'tmp_name' => sys_get_temp_dir() . '/mock_large_test_image.jpg'],
                 4000,
                 3000,
-                "File size exceeds the maximum limit of 5 MB."
+                "File size exceeds the maximum limit of 5 MB.",
             ],
             'image dimensions exceeded' => [
                 ['name' => 'image.jpg', 'tmp_name' => __DIR__ . '/test_image.jpg'],
                 6000,
                 6000,
-                "Image dimensions exceed the maximum allowed size of 5000x5000."
-            ]
+                "Image dimensions exceed the maximum allowed size of 5000x5000.",
+            ],
         ];
     }
 
@@ -86,7 +86,7 @@ class ImageValidationServiceTest extends TestCase
         $files = [
             __DIR__ . '/test_image.jpg',
             __DIR__ . '/test_image.gif',
-            sys_get_temp_dir() . '/mock_large_test_image.jpg'
+            sys_get_temp_dir() . '/mock_large_test_image.jpg',
         ];
 
         foreach ($files as $file) {

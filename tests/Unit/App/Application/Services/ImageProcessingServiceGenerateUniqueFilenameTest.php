@@ -33,22 +33,22 @@ class ImageProcessingServiceGenerateUniqueFilenameTest extends TestCase
             'withoutOutputFilename' => [
                 'example.jpg',
                 '',
-                ['pattern' => '/^resized_example_[a-z0-9]{13}\.jpg$/']
+                ['pattern' => '/^resized_example_[a-z0-9]{13}\.jpg$/'],
             ],
             'withOutputFilename' => [
                 'example.jpg',
                 'custom_name',
-                ['value' => 'custom_name.jpg']
+                ['value' => 'custom_name.jpg'],
             ],
             'withoutExtension' => [
                 'example',
                 '',
-                ['pattern' => '/^resized_example_[a-z0-9]{13}$/']
+                ['pattern' => '/^resized_example_[a-z0-9]{13}$/'],
             ],
             'withOutputFilenameWithoutExtension' => [
                 'example',
                 'custom_name',
-                ['value' => 'custom_name']
+                ['value' => 'custom_name'],
             ],
         ];
     }

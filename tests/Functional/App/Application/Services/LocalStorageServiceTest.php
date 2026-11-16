@@ -57,7 +57,7 @@ class LocalStorageServiceTest extends TestCase
     {
         return [
             'first upload' => ['test_image.jpg', 'test_image_v1.jpg'],
-            'second upload' => ['test_image55.jpg', 'test_image55_v1.jpg']
+            'second upload' => ['test_image55.jpg', 'test_image55_v1.jpg'],
         ];
     }
 

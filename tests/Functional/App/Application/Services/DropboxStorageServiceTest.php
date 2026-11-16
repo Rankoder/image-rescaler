@@ -69,13 +69,13 @@ class DropboxStorageServiceTest extends TestCase
                 'test_image.jpg',
                 ['path_display' => '/Aplikacje/image-rescaler/test_image_v1.jpg'],
                 'test_image_v1.jpg',
-                ['test_image_v1.jpg' => false]
+                ['test_image_v1.jpg' => false],
             ],
             'second upload' => [
                 'test_image.jpg',
                 ['path_display' => '/Aplikacje/image-rescaler/test_image_v2.jpg'],
                 'test_image_v2.jpg',
-                ['test_image_v1.jpg' => true, 'test_image_v2.jpg' => false]
+                ['test_image_v1.jpg' => true, 'test_image_v2.jpg' => false],
             ],
         ];
     }
