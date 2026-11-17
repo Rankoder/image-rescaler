@@ -8,11 +8,12 @@ PHP and Composer run only in Docker, in the `web` service. Before a PR, `compose
 
 ## Git
 
-- Branch off `master`, PR into `master`; no intermediate `develop`.
+- Branch off `develop`, PR into `develop`; `master` is updated only by a PR from `develop`.
 - Branch name: `<type>/ir-<nr>-<short-desc>`, e.g. `docs/ir-02-claude-md`. Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
+- The branch type describes the whole task, a commit type the change in that commit, so they can differ: a `fix/…` branch may hold a `test(…)` commit. `feat` is a feature of the application itself; environment, Docker, CI and tooling are `chore`.
 - One number is one task: one branch, one PR. Numbers increase and are never reused. A fix during a task is another commit on the same branch.
 - Conventional Commits: `type(scope): imperative summary`, e.g. `fix(storage): reject path traversal in output filename`.
-- Konrad commits and pushes.
+- Merging a PR: a merge commit for environment and cleanup tasks, whose commits each say something on their own; squash for a feature whose branch holds work-in-progress commits.
 - Before a PR: clean run from a fresh clone of the branch (`docker compose build --no-cache`), then everything the README describes, tests included. Findings outside the task's scope go to the task that owns that area, not into this branch.
 
 ## Code standard
