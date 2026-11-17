@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit bootstrap="vendor/autoload.php"
          colors="true"
+         executionOrder="random"
          stopOnFailure="false"
          stopOnError="false"
          stopOnIncomplete="false"
@@ -14,7 +15,17 @@
         </testsuite>
     </testsuites>
 
+    <!-- The whole environment the tests see; force="true" overrides the container's .env, so no test sets variables itself -->
     <php>
-        <env name="APP_ENV" value="testing"/>
+        <env name="APP_ENV" value="testing" force="true"/>
+        <env name="AWS_ACCESS_KEY_ID" value="test-access-key-id" force="true"/>
+        <env name="AWS_SECRET_ACCESS_KEY" value="test-secret-access-key" force="true"/>
+        <env name="AWS_REGION" value="eu-central-1" force="true"/>
+        <env name="AWS_BUCKET_NAME" value="test-bucket" force="true"/>
+        <env name="DROPBOX_ACCESS_TOKEN" value="test-dropbox-token" force="true"/>
+        <env name="ALLOWED_IMAGE_TYPES" value="image/jpeg,image/png,image/jpg" force="true"/>
+        <env name="MAX_FILE_SIZE" value="5242880" force="true"/>
+        <env name="MAX_IMAGE_WIDTH" value="5000" force="true"/>
+        <env name="MAX_IMAGE_HEIGHT" value="5000" force="true"/>
     </php>
 </phpunit>

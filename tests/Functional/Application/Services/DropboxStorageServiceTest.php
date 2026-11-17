@@ -20,9 +20,6 @@ class DropboxStorageServiceTest extends TestCase
 
     protected function setUp(): void
     {
-        // Mock the environment variables
-        $_ENV['DROPBOX_ACCESS_TOKEN'] = 'mocked_dropbox_access_token';
-
         // Create a Dropbox mock
         $this->dropboxMock = Mockery::mock(Dropbox::class);
         $this->service = $this->createServiceWithMockedDropbox();
