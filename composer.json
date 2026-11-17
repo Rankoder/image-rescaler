@@ -5,10 +5,16 @@
             "App\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
     "scripts": {
         "test": "phpunit",
         "test:unit": "phpunit --testsuite 'Unit Tests'",
         "test:functional": "phpunit --testsuite 'Functional Tests'",
+        "test:integration": "phpunit --testsuite 'Integration Tests'",
         "phpstan": "phpstan analyse --no-progress",
         "cs": "php-cs-fixer check",
         "cs:fix": "php-cs-fixer fix",
@@ -18,6 +24,7 @@
         "test": "Run all tests",
         "test:unit": "Run unit tests",
         "test:functional": "Run functional tests",
+        "test:integration": "Run integration tests",
         "phpstan": "Run static analysis",
         "cs": "Check code style without changing files",
         "cs:fix": "Fix code style",
@@ -38,7 +45,7 @@
         "friendsofphp/php-cs-fixer": "^3.95",
         "mockery/mockery": "^1.6",
         "phpstan/phpstan": "^2.3",
-        "phpunit/phpunit": "^11.2"
+        "phpunit/phpunit": "^12.0"
     },
     "config": {
         "sort-packages": true

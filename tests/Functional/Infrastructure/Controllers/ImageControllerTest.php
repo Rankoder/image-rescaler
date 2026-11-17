@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Controllers;
+namespace Tests\Functional\Infrastructure\Controllers;
 
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\ServerRequest;
@@ -48,17 +48,6 @@ class ImageControllerTest extends TestCase
             $reflectedProperty = $reflection->getProperty($property);
             $reflectedProperty->setValue($this->controller, $mock);
         }
-
-        // Mock environment variables
-        putenv('AWS_ACCESS_KEY_ID=your_aws_access_key_id');
-        putenv('AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key');
-        putenv('AWS_REGION=your_aws_region');
-        putenv('AWS_BUCKET_NAME=your_aws_bucket_name');
-        putenv('DROPBOX_ACCESS_TOKEN=your_dropbox_access_token');
-        putenv('ALLOWED_IMAGE_TYPES=image/jpeg,image/png,image/jpg');
-        putenv('MAX_FILE_SIZE=10485760'); // 10 MB
-        putenv('MAX_IMAGE_WIDTH=6000');
-        putenv('MAX_IMAGE_HEIGHT=6000');
 
         // Create a temporary test image file
         $this->tempFilePath = sys_get_temp_dir() . '/test_image.jpg';

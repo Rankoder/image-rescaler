@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Controllers;
+namespace Tests\Unit\Infrastructure\Controllers;
 
+use App\Infrastructure\Controllers\HealthController;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\TestCase;
 

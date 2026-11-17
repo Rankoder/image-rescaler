@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Services;
+namespace Tests\Unit\Application\Services;
 
 use App\Application\Services\ImageValidationService;
 use Exception;
@@ -16,12 +16,6 @@ class ImageValidationServiceTest extends TestCase
     protected function setUp(): void
     {
         $this->service = new ImageValidationService();
-
-        // Mock the environment variables
-        putenv('ALLOWED_IMAGE_TYPES=image/jpeg,image/png,image/jpg');
-        putenv('MAX_FILE_SIZE=5242880'); // 5 MB
-        putenv('MAX_IMAGE_WIDTH=5000');
-        putenv('MAX_IMAGE_HEIGHT=5000');
 
         // Ensure test files exist
         $this->createMockFile(__DIR__ . '/test_image.jpg', 1024); // 1 KB

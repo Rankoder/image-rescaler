@@ -115,13 +115,17 @@ docker compose exec web php src/Application/CLI/resize.php \
 Tests and quality tools run in the container as Composer scripts:
 
 ```sh
-docker compose exec web composer test                # all tests; test:unit or test:functional for one suite
+docker compose exec web composer test                # all tests; test:unit, test:functional or test:integration for one suite
 docker compose exec web composer phpstan             # static analysis, level max
 docker compose exec web composer cs                  # code style check (PER-CS); cs:fix applies it
 docker compose exec web composer check               # cs, phpstan and test in one go, as before a PR
 ```
 
 `docker compose exec web composer list` shows them with descriptions. Existing PHPStan errors are recorded in `phpstan-baseline.neon`; new code must pass without adding to it.
+
+Unit tests cover single classes, functional tests a service with its external client mocked, integration tests the whole upload through the controller into `storage/`, without mocks. S3 and Dropbox have no integration tests, since they need real accounts.
+
+Tests take their environment variables from `phpunit.xml`, not from `.env`, and run in random order, so they cannot lean on each other. PHPUnit prints the seed; `docker compose exec web vendor/bin/phpunit --order-by random --random-order-seed <seed>` repeats that order.
 
 To run and debug tests from PhpStorm (Docker interpreter, Xdebug), follow [docs/phpstorm-xdebug.md](docs/phpstorm-xdebug.md).
 
@@ -139,7 +143,7 @@ docker/entrypoint.sh       dev container start: dependencies, storage dir, Apach
 docker/php.ini             PHP settings: errors to the log, not to responses
 docker/xdebug.ini          Xdebug settings, dev image only
 docs/                      step-by-step guides, linked from this README
-tests/                     Unit and Functional (PHPUnit)
+tests/                     Unit, Functional and Integration (PHPUnit); fixtures/ holds the test image
 phpstan.neon.dist          PHPStan config; phpstan-baseline.neon holds existing errors
 .php-cs-fixer.dist.php     PHP CS Fixer config
 ```
@@ -148,6 +152,7 @@ phpstan.neon.dist          PHPStan config; phpstan-baseline.neon holds existing 
 
 - The image is resized to exactly `max_width` × `max_height`; the aspect ratio is not preserved.
 - The `url` returned for `local` storage is not served by the web server.
+- With `local` storage the `_v<n>` suffix never goes above `_v1`: a second upload under the same name overwrites the first file.
 - The CLI does not validate the input file the way the API does.
 
 ## License
