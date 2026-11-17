@@ -1,0 +1,31 @@
+name: CI
+
+# Every push, on any branch; a PR shows the result of its latest commit
+on: push
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: gd
+          tools: composer:v2
+          coverage: none
+
+      - run: composer install --no-interaction --no-progress
+
+      # The app loads .env on start; the example file is enough for tests
+      - run: cp .env-example .env
+
+      - run: composer check
