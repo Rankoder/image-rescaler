@@ -38,6 +38,10 @@ Added:
 
 Each module gets its own `README.md` once rebuilt: purpose, public API, dependencies, how to test. Read a module's README before working in it.
 
+## Guides
+
+Step-by-step instructions (e.g. IDE setup) live in `docs/`, one file per topic. The README only links to them, so they are not loaded with it; read a guide when the task needs it.
+
 ## Docs stay current
 
 A change that invalidates this file or a README updates it in the same task.
