@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Services;
+namespace Tests\Functional\Application\Services;
 
+use App\Application\Services\DropboxStorageService;
 use App\Domain\ValueObjects\ImageValueObject;
 use Kunnu\Dropbox\Dropbox;
 use Kunnu\Dropbox\Exceptions\DropboxClientException;

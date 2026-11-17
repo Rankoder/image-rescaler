@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Services;
+namespace Tests\Unit\Application\Services;
 
+use App\Application\Services\ImageProcessingService;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

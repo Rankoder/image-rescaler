@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Services;
+namespace Tests\Functional\Application\Services;
 
+use App\Application\Services\S3StorageService;
 use App\Domain\ValueObjects\ImageValueObject;
 use Aws\Exception\AwsException;
 use Aws\S3\S3Client;

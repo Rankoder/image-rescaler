@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Services;
+namespace Tests\Unit\Application\Services;
 
 use App\Application\Services\ImageValidationService;
 use Exception;

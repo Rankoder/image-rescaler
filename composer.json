@@ -5,6 +5,11 @@
             "App\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
     "scripts": {
         "test": "phpunit",
         "test:unit": "phpunit --testsuite 'Unit Tests'",

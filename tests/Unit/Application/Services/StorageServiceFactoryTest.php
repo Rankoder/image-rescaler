@@ -2,8 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Services;
+namespace Tests\Unit\Application\Services;
 
+use App\Application\Services\DropboxStorageService;
+use App\Application\Services\LocalStorageService;
+use App\Application\Services\S3StorageService;
+use App\Application\Services\StorageServiceFactory;
 use Exception;
 use PHPUnit\Framework\TestCase;
 
