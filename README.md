@@ -125,7 +125,7 @@ docker compose exec web composer check               # cs, phpstan and test in o
 
 Unit tests cover single classes, functional tests a service with its external client mocked, integration tests the whole upload through the controller into `storage/`, without mocks. S3 and Dropbox have no integration tests, since they need real accounts.
 
-Tests take their environment variables from `phpunit.xml`, not from `.env`, and run in random order, so they cannot lean on each other. PHPUnit prints the seed; `docker compose exec web vendor/bin/phpunit --random-order-seed <seed>` repeats that order.
+Tests take their environment variables from `phpunit.xml`, not from `.env`, and run in random order, so they cannot lean on each other. PHPUnit prints the seed; `docker compose exec web vendor/bin/phpunit --order-by random --random-order-seed <seed>` repeats that order.
 
 To run and debug tests from PhpStorm (Docker interpreter, Xdebug), follow [docs/phpstorm-xdebug.md](docs/phpstorm-xdebug.md).
 
