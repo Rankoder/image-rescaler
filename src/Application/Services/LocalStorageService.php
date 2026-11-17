@@ -23,7 +23,7 @@ class LocalStorageService extends AbstractStorageService implements StorageServi
 
         $this->ensureStoragePathExists();
 
-        if ($this->fileExists($sourcePath)) {
+        if (file_exists($sourcePath)) {
             $this->copyFile($sourcePath, $destinationPath);
             $this->removeFile($sourcePath);
         } else {
@@ -54,9 +54,9 @@ class LocalStorageService extends AbstractStorageService implements StorageServi
         }
     }
 
-    protected function fileExists(string $filePath): bool
+    protected function fileExists(string $filename): bool
     {
-        return file_exists($filePath);
+        return file_exists($this->storagePath . $filename);
     }
 
     public function getPublicUrl(string $filePath): string
