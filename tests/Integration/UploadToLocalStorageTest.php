@@ -56,6 +56,20 @@ final class UploadToLocalStorageTest extends TestCase
         $this->assertSame([60, 40, IMAGETYPE_JPEG], [$size[0], $size[1], $size[2]]);
     }
 
+    public function testASecondUploadUnderTheSameNameGetsTheNextVersion(): void
+    {
+        $this->upload('photo.jpg', 60, 40);
+        copy(self::FIXTURE, $this->uploadedFilePath);
+
+        $response = $this->upload('photo.jpg', 60, 40);
+
+        $this->assertSame($this->outputName . '_v2.jpg', $this->json($response)['path']);
+        $this->assertSame(
+            [self::STORAGE_DIR . $this->outputName . '_v1.jpg', self::STORAGE_DIR . $this->outputName . '_v2.jpg'],
+            $this->storedFiles(),
+        );
+    }
+
     public function testRejectsAFileTypeThatIsNotAllowed(): void
     {
         $response = $this->upload('photo.gif', 60, 40);
