@@ -15,7 +15,7 @@ cp .env-example .env          # then fill in the values, see Configuration
 docker compose up --build -d
 ```
 
-On start the container installs Composer dependencies and creates the `storage/` directory. The API is available at `http://localhost:8080`.
+This is the development setup: the project directory is mounted into the container, which on start installs Composer dependencies and creates the `storage/` directory. The API is available at `http://localhost:8080`.
 
 Check that it responds:
 
@@ -29,6 +29,17 @@ PHP errors and warnings are never shown in responses; they go to the container l
 ```sh
 docker compose logs -f web
 ```
+
+## Production image
+
+The Dockerfile has two targets. `dev` is what Quick start runs. `prod` holds only the application code and production dependencies (no Composer, Xdebug or dev packages), runs Apache as `www-data` and reports its health through `GET /health`:
+
+```sh
+docker compose -f compose.prod.yaml up --build -d
+docker compose -f compose.prod.yaml ps      # STATUS shows (healthy)
+```
+
+It publishes the same port 8080, so stop the development container first (`docker compose stop`). Settings come from the same `.env`; files stored with the `local` service live in the `storage` volume.
 
 ## Configuration
 
@@ -122,7 +133,7 @@ src/
 └── Infrastructure/        HTTP controllers
 public/index.php           HTTP entry point → routes.php → controllers (bramus/router)
 config/                    S3 config from environment variables (dropbox.php is unused; Dropbox reads getenv directly)
-docker/entrypoint.sh       container start: dependencies, storage dir, Apache
+docker/entrypoint.sh       dev container start: dependencies, storage dir, Apache
 docker/php.ini             PHP settings: errors to the log, not to responses
 docker/xdebug.ini          Xdebug settings, dev image only
 tests/                     Unit and Functional (PHPUnit)
