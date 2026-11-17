@@ -15,11 +15,16 @@
         <testsuite name="Functional Tests">
             <directory>tests/Functional</directory>
         </testsuite>
+        <testsuite name="Integration Tests">
+            <directory>tests/Integration</directory>
+        </testsuite>
     </testsuites>
 
     <!-- The whole environment the tests see; force="true" overrides the container's .env, so no test sets variables itself -->
     <php>
         <env name="APP_ENV" value="testing" force="true"/>
+        <env name="APP_HOST" value="localhost" force="true"/>
+        <env name="APP_PORT" value="8080" force="true"/>
         <env name="AWS_ACCESS_KEY_ID" value="test-access-key-id" force="true"/>
         <env name="AWS_SECRET_ACCESS_KEY" value="test-secret-access-key" force="true"/>
         <env name="AWS_REGION" value="eu-central-1" force="true"/>
