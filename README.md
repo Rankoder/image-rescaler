@@ -164,7 +164,6 @@ phpstan.neon.dist          PHPStan config; phpstan-baseline.neon holds existing 
 
 - The image is resized to exactly `max_width` × `max_height`; the aspect ratio is not preserved.
 - The `url` returned for `local` storage is not served by the web server.
-- With `local` storage the `_v<n>` suffix never goes above `_v1`: a second upload under the same name overwrites the first file.
 - The CLI does not validate the input file the way the API does.
 
 ## License
