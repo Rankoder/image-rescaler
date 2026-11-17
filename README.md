@@ -71,6 +71,8 @@ Only the variables of the storage you use need real values.
 
 ## API
 
+Any other path or method returns `404` with `{"status": "error", "message": "Not found"}`.
+
 ### `GET /health`
 
 Tells whether the application is up; meant for container health checks and monitoring. Returns `200`:

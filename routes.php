@@ -3,6 +3,7 @@
 use Bramus\Router\Router;
 use App\Infrastructure\Controllers\HealthController;
 use App\Infrastructure\Controllers\ImageController;
+use App\Infrastructure\Controllers\NotFoundController;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Psr\Http\Message\ResponseInterface;
 
@@ -40,6 +41,12 @@ $router->post('/upload', function () use ($emit) {
     $controller = new ImageController();
 
     $emit($controller->upload($request));
+});
+
+$router->set404(function () use ($emit) {
+    $psr17Factory = new Psr17Factory();
+
+    $emit((new NotFoundController($psr17Factory, $psr17Factory))->respond());
 });
 
 // Run the router
