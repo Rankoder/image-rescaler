@@ -1,0 +1,90 @@
+### Health check
+GET {{baseUrl}}/health
+
+> {%
+    client.test("200 with status ok", () => {
+        client.assert(response.status === 200);
+        client.assert(response.body.status === "ok");
+    });
+%}
+
+### Upload the test image to local storage
+POST {{baseUrl}}/upload
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="test_image.jpg"
+Content-Type: image/jpeg
+
+< ../tests/fixtures/test_image.jpg
+--boundary
+Content-Disposition: form-data; name="max_width"
+
+100
+--boundary
+Content-Disposition: form-data; name="max_height"
+
+100
+--boundary
+Content-Disposition: form-data; name="service"
+
+local
+--boundary
+Content-Disposition: form-data; name="output_filename"
+
+http_client_test
+--boundary--
+
+> {%
+    client.test("200 with the stored path", () => {
+        client.assert(response.status === 200);
+        client.assert(response.body.status === "success");
+        client.assert(response.body.path.startsWith("http_client_test_v"));
+    });
+%}
+
+### Upload a file type that is not allowed
+POST {{baseUrl}}/upload
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="notes.txt"
+Content-Type: text/plain
+
+< ../README.md
+--boundary
+Content-Disposition: form-data; name="max_width"
+
+100
+--boundary
+Content-Disposition: form-data; name="max_height"
+
+100
+--boundary--
+
+> {%
+    client.test("error naming the file type", () => {
+        client.assert(response.body.status === "error");
+        client.assert(response.body.message.startsWith("Invalid image file type: txt"));
+    });
+%}
+
+### Upload without the required fields
+POST {{baseUrl}}/upload
+
+> {%
+    client.test("400 with an error", () => {
+        client.assert(response.status === 400);
+        client.assert(response.body.status === "error");
+    });
+%}
+
+### Unknown route
+GET {{baseUrl}}/nope
+
+> {%
+    client.test("404 with a JSON error", () => {
+        client.assert(response.status === 404);
+        client.assert(response.body.message === "Not found");
+    });
+%}

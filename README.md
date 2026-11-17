@@ -110,6 +110,8 @@ Success (`200`):
 
 Errors return `{"status": "error", "message": "..."}` with `400` for missing or invalid fields and `500` for everything else.
 
+To send these requests from PhpStorm, with ready examples and checks of the responses, follow [docs/phpstorm-http-client.md](docs/phpstorm-http-client.md).
+
 ## CLI
 
 ```sh
@@ -157,6 +159,7 @@ docker/entrypoint.sh       dev container start: dependencies, storage dir, Apach
 docker/php.ini             PHP settings: errors to the log, not to responses
 docker/xdebug.ini          Xdebug settings, dev image only
 docs/                      step-by-step guides, linked from this README
+http/                      PhpStorm HTTP client requests (api.http) and environments
 tests/                     Unit, Functional and Integration (PHPUnit); fixtures/ holds the test image
 phpstan.neon.dist          PHPStan config; phpstan-baseline.neon holds existing errors
 .php-cs-fixer.dist.php     PHP CS Fixer config
