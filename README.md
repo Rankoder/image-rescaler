@@ -48,6 +48,14 @@ Only the variables of the storage you use need real values.
 
 ## API
 
+### `GET /health`
+
+Tells whether the application is up; meant for container health checks and monitoring. Returns `200`:
+
+```json
+{"status": "ok"}
+```
+
 ### `POST /upload`
 
 `multipart/form-data` fields:
@@ -111,8 +119,8 @@ src/
 ├── Domain/                interfaces and value objects
 ├── Application/           image processing, validation, storage services
 │   └── CLI/resize.php     CLI entry point
-└── Infrastructure/        HTTP controller
-public/index.php           HTTP entry point → routes.php → ImageController (bramus/router)
+└── Infrastructure/        HTTP controllers
+public/index.php           HTTP entry point → routes.php → controllers (bramus/router)
 config/                    S3 config from environment variables (dropbox.php is unused; Dropbox reads getenv directly)
 docker/entrypoint.sh       container start: dependencies, storage dir, Apache
 docker/php.ini             PHP settings: errors to the log, not to responses
