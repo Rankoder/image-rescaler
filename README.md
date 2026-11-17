@@ -123,6 +123,8 @@ docker compose exec web composer check               # cs, phpstan and test in o
 
 `docker compose exec web composer list` shows them with descriptions. Existing PHPStan errors are recorded in `phpstan-baseline.neon`; new code must pass without adding to it.
 
+To run and debug tests from PhpStorm (Docker interpreter, Xdebug), follow [docs/phpstorm-xdebug.md](docs/phpstorm-xdebug.md).
+
 ## Project structure
 
 ```
@@ -136,6 +138,7 @@ config/                    S3 config from environment variables (dropbox.php is 
 docker/entrypoint.sh       dev container start: dependencies, storage dir, Apache
 docker/php.ini             PHP settings: errors to the log, not to responses
 docker/xdebug.ini          Xdebug settings, dev image only
+docs/                      step-by-step guides, linked from this README
 tests/                     Unit and Functional (PHPUnit)
 phpstan.neon.dist          PHPStan config; phpstan-baseline.neon holds existing errors
 .php-cs-fixer.dist.php     PHP CS Fixer config
