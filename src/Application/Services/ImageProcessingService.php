@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Application\Services;
 
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\ImageManager;
 use App\Domain\ValueObjects\ImageValueObject;
+use InvalidArgumentException;
 
 class ImageProcessingService
 {
@@ -13,7 +15,7 @@ class ImageProcessingService
 
     public function __construct()
     {
-        $this->imageManager = ImageManager::gd();
+        $this->imageManager = new ImageManager(new GdDriver());
     }
 
     public function generateUniqueFilename(string $filename, string $outputFilename = ''): string
@@ -29,8 +31,13 @@ class ImageProcessingService
 
     public function resizeImage(array $file, int $maxWidth, int $maxHeight, string $outputFilename): ImageValueObject
     {
-        $image = $this->imageManager->read($file['tmp_name']);
-        $image->resize($maxWidth, $maxHeight);
+        $sourcePath = $file['tmp_name'] ?? null;
+        if (!is_string($sourcePath)) {
+            throw new InvalidArgumentException('The uploaded file has no temporary path.');
+        }
+
+        $image = $this->imageManager->decodePath($sourcePath);
+        $image->scaleDown($maxWidth, $maxHeight);
 
         $tempFilePath = $this->getTemporaryFilePath($outputFilename);
         $image->save($tempFilePath);
