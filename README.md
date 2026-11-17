@@ -30,6 +30,17 @@ PHP errors and warnings are never shown in responses; they go to the container l
 docker compose logs -f web
 ```
 
+## A second copy next to this one
+
+A second copy of the project, e.g. a clone or worktree used for review, can run at the same time. In its `.env` set another host port and its own Compose project name:
+
+```sh
+APP_PORT=8081
+COMPOSE_PROJECT_NAME=image-rescaler-review
+```
+
+Without the project name, two copies in directories with the same name would share containers and replace each other. With these two lines `docker compose up --build -d` in that copy serves `http://localhost:8081`, and `docker compose exec web …` there runs in its own container.
+
 ## Production image
 
 The Dockerfile has two targets. `dev` is what Quick start runs. `prod` holds only the application code and production dependencies (no Composer, Xdebug or dev packages), runs Apache as `www-data` and reports its health through `GET /health`:
@@ -47,6 +58,7 @@ All settings come from `.env`:
 
 | Variable | Description |
 |----------|-------------|
+| `APP_PORT` | host port of the development container, `8080` by default |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | S3 credentials |
 | `AWS_REGION` | S3 region, e.g. `eu-central-1` |
 | `AWS_BUCKET_NAME` | target bucket |

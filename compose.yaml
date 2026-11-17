@@ -7,7 +7,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
-      - "8080:8080"
+      # Host port; a second copy of the project next to this one sets another APP_PORT in its .env
+      - "${APP_PORT:-8080}:8080"
     volumes:
       - .:/var/www/html
     environment:
@@ -20,3 +21,5 @@ services:
       - MAX_FILE_SIZE=${MAX_FILE_SIZE}
       - MAX_IMAGE_WIDTH=${MAX_IMAGE_WIDTH}
       - MAX_IMAGE_HEIGHT=${MAX_IMAGE_HEIGHT}
+      # LocalStorageService builds the returned url from it
+      - APP_PORT=${APP_PORT:-8080}
