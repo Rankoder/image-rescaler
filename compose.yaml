@@ -1,6 +1,11 @@
 services:
   web:
-    build: .
+    build:
+      context: .
+      target: dev
+    # Xdebug connects back to the IDE on the host; Docker Desktop resolves this name itself, Linux needs the mapping
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8080:80"
     volumes:

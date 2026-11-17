@@ -116,6 +116,7 @@ public/index.php           HTTP entry point → routes.php → ImageController (
 config/                    S3 config from environment variables (dropbox.php is unused; Dropbox reads getenv directly)
 docker/entrypoint.sh       container start: dependencies, storage dir, Apache
 docker/php.ini             PHP settings: errors to the log, not to responses
+docker/xdebug.ini          Xdebug settings, dev image only
 tests/                     Unit and Functional (PHPUnit)
 phpstan.neon.dist          PHPStan config; phpstan-baseline.neon holds existing errors
 .php-cs-fixer.dist.php     PHP CS Fixer config

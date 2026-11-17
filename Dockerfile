@@ -1,12 +1,11 @@
-FROM php:8.5-apache
+# Shared by every target: PHP with GD, Apache serving public/
+FROM php:8.5-apache AS base
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
-    git \
-    unzip \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install gd \
     && docker-php-ext-install fileinfo
@@ -21,13 +20,25 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-av
 
 COPY docker/php.ini "$PHP_INI_DIR/conf.d/app.ini"
 
+WORKDIR /var/www/html/
+
+
+# Development: Composer, Xdebug and dev dependencies; compose bind-mounts the project dir over the copy below
+FROM base AS dev
+
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip
+
+RUN pecl install xdebug \
+    && docker-php-ext-enable xdebug
+COPY docker/xdebug.ini "$PHP_INI_DIR/conf.d/xdebug.ini"
+
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # The project dir is bind-mounted in dev with a different owner; let git (used by Composer) trust it
 RUN git config --global --add safe.directory /var/www/html
-
-WORKDIR /var/www/html/
 
 # Dependencies first, so this layer is cached until composer.json or composer.lock changes
 COPY composer.json composer.lock ./
