@@ -78,7 +78,7 @@ abstract class AbstractStorageService
     {
         return array_map(
             fn($type) => str_replace('image/', '', $type),
-            explode(',', getenv('ALLOWED_IMAGE_TYPES'))
+            explode(',', getenv('ALLOWED_IMAGE_TYPES')),
         );
     }
 
@@ -97,7 +97,7 @@ abstract class AbstractStorageService
 
     private function getMaxFileSize(): int
     {
-        return (int)getenv('MAX_FILE_SIZE');
+        return (int) getenv('MAX_FILE_SIZE');
     }
 
     private function validateFilePath(string $filePath): void
@@ -117,7 +117,7 @@ abstract class AbstractStorageService
         }
     }
 
-    protected abstract function fileExists(string $filename): bool;
+    abstract protected function fileExists(string $filename): bool;
 
-    protected abstract function store(string $sourcePath, string $destinationFilename): void;
+    abstract protected function store(string $sourcePath, string $destinationFilename): void;
 }

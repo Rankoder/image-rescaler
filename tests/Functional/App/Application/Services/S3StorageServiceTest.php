@@ -75,7 +75,7 @@ class S3StorageServiceTest extends TestCase
                 'test_image.jpg',
                 ['filename' => 'test_image_v1.jpg'],
                 ['ObjectURL' => 'https://s3.amazonaws.com/bucket/test_image_v1.jpg'],
-                [['key' => 'test_image_v1.jpg', 'throw' => true]]
+                [['key' => 'test_image_v1.jpg', 'throw' => true]],
             ],
             'second upload' => [
                 'test_image.jpg',
@@ -83,8 +83,8 @@ class S3StorageServiceTest extends TestCase
                 ['ObjectURL' => 'https://s3.amazonaws.com/bucket/test_image_v2.jpg'],
                 [
                     ['key' => 'test_image_v1.jpg', 'throw' => false],
-                    ['key' => 'test_image_v2.jpg', 'throw' => true]
-                ]
+                    ['key' => 'test_image_v2.jpg', 'throw' => true],
+                ],
             ],
         ];
     }

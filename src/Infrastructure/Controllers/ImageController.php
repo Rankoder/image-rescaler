@@ -47,8 +47,8 @@ class ImageController
 
         $file = $uploadedFiles['file'] ?? null;
         $service = $parsedBody['service'] ?? 'local';
-        $maxWidth = (int)($parsedBody['max_width'] ?? 0);
-        $maxHeight = (int)($parsedBody['max_height'] ?? 0);
+        $maxWidth = (int) ($parsedBody['max_width'] ?? 0);
+        $maxHeight = (int) ($parsedBody['max_height'] ?? 0);
         $outputFilename = $parsedBody['output_filename'] ?? '';
 
         if (!$this->isValidRequest($file, $maxWidth, $maxHeight)) {

@@ -33,7 +33,7 @@ class ImageValidationService
     {
         return array_map(
             fn($type) => str_replace('image/', '', $type),
-            explode(',', getenv('ALLOWED_IMAGE_TYPES'))
+            explode(',', getenv('ALLOWED_IMAGE_TYPES')),
         );
     }
 
@@ -44,7 +44,7 @@ class ImageValidationService
 
     private function validateFileSize(array $file): void
     {
-        $maxFileSize = (int)getenv('MAX_FILE_SIZE');
+        $maxFileSize = (int) getenv('MAX_FILE_SIZE');
         if (filesize($file['tmp_name']) > $maxFileSize) {
             throw new Exception(sprintf(self::ERROR_FILE_SIZE_EXCEEDED, $maxFileSize / 1024 / 1024));
         }
@@ -52,8 +52,8 @@ class ImageValidationService
 
     private function validateImageDimensions(int $maxWidth, int $maxHeight): void
     {
-        $maxAllowedWidth = (int)getenv('MAX_IMAGE_WIDTH');
-        $maxAllowedHeight = (int)getenv('MAX_IMAGE_HEIGHT');
+        $maxAllowedWidth = (int) getenv('MAX_IMAGE_WIDTH');
+        $maxAllowedHeight = (int) getenv('MAX_IMAGE_HEIGHT');
 
         if ($maxWidth > $maxAllowedWidth || $maxHeight > $maxAllowedHeight) {
             throw new Exception(sprintf(self::ERROR_IMAGE_DIMENSIONS_EXCEEDED, $maxAllowedWidth, $maxAllowedHeight));

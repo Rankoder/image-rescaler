@@ -8,13 +8,13 @@ require __DIR__ . '/vendor/autoload.php';
 $router = new Router();
 
 // Define routes
-$router->post('/upload', function() {
+$router->post('/upload', function () {
     $psr17Factory = new Nyholm\Psr7\Factory\Psr17Factory();
     $creator = new Nyholm\Psr7Server\ServerRequestCreator(
         $psr17Factory,
         $psr17Factory,
         $psr17Factory,
-        $psr17Factory
+        $psr17Factory,
     );
 
     $request = $creator->fromGlobals();

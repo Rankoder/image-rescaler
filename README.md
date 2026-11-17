@@ -91,24 +91,34 @@ docker compose exec web php src/Application/CLI/resize.php \
 | `-s` | `local` (default), `s3` or `dropbox` |
 | `-o` | name of the stored file |
 
-## Tests
+## Development
+
+Tests and quality tools run in the container as Composer scripts:
 
 ```sh
-docker compose exec web vendor/bin/phpunit                          # all tests
-docker compose exec web vendor/bin/phpunit --testsuite "Unit Tests"  # or "Functional Tests"
+docker compose exec web composer test                # all tests; test:unit or test:functional for one suite
+docker compose exec web composer phpstan             # static analysis, level max
+docker compose exec web composer cs                  # code style check (PER-CS); cs:fix applies it
+docker compose exec web composer check               # cs, phpstan and test in one go, as before a PR
 ```
+
+`docker compose exec web composer list` shows them with descriptions. Existing PHPStan errors are recorded in `phpstan-baseline.neon`; new code must pass without adding to it.
 
 ## Project structure
 
 ```
 src/
-├── Domain/           interfaces and value objects
-├── Application/      image processing, validation, storage services; CLI entry point
-└── Infrastructure/   HTTP controller
-public/index.php      HTTP entry point → routes.php
-docker/entrypoint.sh  container start: dependencies, storage dir, Apache
-docker/php.ini        PHP settings: errors to the log, not to responses
-tests/                Unit and Functional (PHPUnit)
+├── Domain/                interfaces and value objects
+├── Application/           image processing, validation, storage services
+│   └── CLI/resize.php     CLI entry point
+└── Infrastructure/        HTTP controller
+public/index.php           HTTP entry point → routes.php → ImageController (bramus/router)
+config/                    S3 config from environment variables (dropbox.php is unused; Dropbox reads getenv directly)
+docker/entrypoint.sh       container start: dependencies, storage dir, Apache
+docker/php.ini             PHP settings: errors to the log, not to responses
+tests/                     Unit and Functional (PHPUnit)
+phpstan.neon.dist          PHPStan config; phpstan-baseline.neon holds existing errors
+.php-cs-fixer.dist.php     PHP CS Fixer config
 ```
 
 ## Known limitations

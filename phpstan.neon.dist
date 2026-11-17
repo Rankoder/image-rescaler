@@ -1,0 +1,11 @@
+includes:
+    - phpstan-baseline.neon
+
+parameters:
+    level: max
+    paths:
+        - config
+        - public
+        - src
+        - tests
+        - routes.php

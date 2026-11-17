@@ -80,8 +80,8 @@ function resizeAndUploadImage(array $options): string
 {
     $filePath = $options['f'];
     $service = $options['s'] ?? 'local';
-    $maxWidth = (int)$options['w'];
-    $maxHeight = (int)$options['h'];
+    $maxWidth = (int) $options['w'];
+    $maxHeight = (int) $options['h'];
     $outputFilename = $options['o'] ?? '';
 
     $imageProcessingService = new ImageProcessingService();
