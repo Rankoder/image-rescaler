@@ -43,11 +43,16 @@ $router->post('/upload', function () use ($emit) {
     $emit($controller->upload($request));
 });
 
-$router->set404(function () use ($emit) {
+$notFound = function () use ($emit) {
     $psr17Factory = new Psr17Factory();
 
     $emit((new NotFoundController($psr17Factory, $psr17Factory))->respond());
-});
+};
+
+// Registered last, so it only catches what no route above matched. It also gives every common
+// method at least one route: bramus/router reads an undefined array key for a method without any.
+$router->all('/.*', $notFound);
+$router->set404($notFound);
 
 // Run the router
 $router->run();

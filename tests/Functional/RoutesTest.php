@@ -15,6 +15,20 @@ final class RoutesTest extends TestCase
         $this->assertSame('{"status":"error","message":"Not found"}', $this->dispatch('GET', '/nope'));
     }
 
+    #[RunInSeparateProcess]
+    public function testAMethodWithNoRoutesGetsAJsonNotFoundWithoutWarnings(): void
+    {
+        set_error_handler(static function (int $level, string $message): never {
+            throw new \ErrorException($message, 0, $level);
+        });
+
+        try {
+            $this->assertSame('{"status":"error","message":"Not found"}', $this->dispatch('PUT', '/upload'));
+        } finally {
+            restore_error_handler();
+        }
+    }
+
     private function dispatch(string $method, string $uri): string
     {
         $_SERVER['REQUEST_METHOD'] = $method;
@@ -22,8 +36,12 @@ final class RoutesTest extends TestCase
         $_SERVER['SCRIPT_NAME'] = '/index.php';
 
         ob_start();
-        require __DIR__ . '/../../routes.php';
+        try {
+            require __DIR__ . '/../../routes.php';
+        } finally {
+            $output = (string) ob_get_clean();
+        }
 
-        return (string) ob_get_clean();
+        return $output;
     }
 }
