@@ -86,8 +86,8 @@ Tells whether the application is up; meant for container health checks and monit
 | Field | Required | Description |
 |-------|----------|-------------|
 | `file` | yes | image to scale |
-| `max_width` | yes | target width in px |
-| `max_height` | yes | target height in px |
+| `max_width` | yes | maximum width in px; the image is scaled down to fit `max_width` × `max_height`, keeping its aspect ratio, and never enlarged |
+| `max_height` | yes | maximum height in px |
 | `service` | no | `local` (default), `s3` or `dropbox` |
 | `output_filename` | no | name of the stored file; a `_v<n>` suffix is added to keep names unique |
 
@@ -118,7 +118,7 @@ docker compose exec web php src/Application/CLI/resize.php \
 | Option | Description |
 |--------|-------------|
 | `-f` | path to the image inside the container, e.g. `/var/www/html/storage/photo.jpg` |
-| `-w`, `-h` | target width and height in px |
+| `-w`, `-h` | maximum width and height in px, scaled as in the API |
 | `-s` | `local` (default), `s3` or `dropbox` |
 | `-o` | name of the stored file |
 
@@ -162,7 +162,6 @@ phpstan.neon.dist          PHPStan config; phpstan-baseline.neon holds existing 
 
 ## Known limitations
 
-- The image is resized to exactly `max_width` × `max_height`; the aspect ratio is not preserved.
 - The `url` returned for `local` storage is not served by the web server.
 - The CLI does not validate the input file the way the API does.
 

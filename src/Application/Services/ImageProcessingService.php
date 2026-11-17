@@ -30,7 +30,7 @@ class ImageProcessingService
     public function resizeImage(array $file, int $maxWidth, int $maxHeight, string $outputFilename): ImageValueObject
     {
         $image = $this->imageManager->read($file['tmp_name']);
-        $image->resize($maxWidth, $maxHeight);
+        $image->scaleDown($maxWidth, $maxHeight);
 
         $tempFilePath = $this->getTemporaryFilePath($outputFilename);
         $image->save($tempFilePath);
