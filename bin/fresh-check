@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# Checks a pushed branch from scratch: fresh clone, .env from the example, build without cache,
+# health check, composer check and, with --prod, the production image. Everything is removed afterwards.
+set -euo pipefail
+
+usage() {
+    echo "Usage: bin/fresh-check [--prod] <branch> [port]" >&2
+    echo "  --prod   also build the production image and wait until it is healthy" >&2
+    echo "  port     host port for the checked copy, 8090 by default" >&2
+    exit 2
+}
+
+check_prod=false
+if [ "${1:-}" = "--prod" ]; then
+    check_prod=true
+    shift
+fi
+
+branch="${1:-}"
+port="${2:-8090}"
+[ -n "$branch" ] || usage
+[[ "$port" =~ ^[0-9]+$ ]] || usage
+
+repo_url="$(git -C "$(dirname "$0")/.." remote get-url origin)"
+project="image-rescaler-fresh-check-$port"
+work_dir="$(mktemp -d)"
+clone_dir="$work_dir/image-rescaler"
+
+step() {
+    printf '\n==> %s\n' "$1"
+}
+
+compose_dev() {
+    docker compose --project-directory "$clone_dir" -p "$project" "$@"
+}
+
+compose_prod() {
+    docker compose --project-directory "$clone_dir" -f "$clone_dir/compose.prod.yaml" -p "$project-prod" "$@"
+}
+
+cleanup() {
+    step "Cleaning up"
+    # vendor/ and storage/ are written by the container and may belong to another user on the host
+    compose_dev exec -T web rm -rf vendor storage >/dev/null 2>&1 || true
+    compose_dev down --volumes --rmi local >/dev/null 2>&1 || true
+    compose_prod down --volumes --rmi local >/dev/null 2>&1 || true
+    rm -rf "$work_dir"
+}
+trap cleanup EXIT
+
+wait_for_health() {
+    local url="http://localhost:$port/health"
+    for _ in $(seq 1 90); do
+        if curl --fail --silent --output /dev/null "$url"; then
+            return 0
+        fi
+        sleep 2
+    done
+    echo "No answer from $url" >&2
+    compose_dev logs --tail 50 web >&2
+    return 1
+}
+
+step "Cloning $branch from $repo_url"
+git clone --quiet --depth 1 --branch "$branch" "$repo_url" "$clone_dir"
+git -C "$clone_dir" log -1 --format='%h %s'
+
+cp "$clone_dir/.env-example" "$clone_dir/.env"
+sed -i.bak "s/^APP_PORT=.*/APP_PORT=$port/" "$clone_dir/.env"
+rm "$clone_dir/.env.bak"
+
+step "Building the dev image without cache"
+compose_dev build --no-cache
+
+step "Starting on port $port"
+compose_dev up -d
+wait_for_health
+curl --silent "http://localhost:$port/health"
+echo
+
+step "Running composer check"
+compose_dev exec -T web composer check
+
+if [ "$check_prod" = true ]; then
+    step "Building the prod image without cache"
+    compose_dev exec -T web rm -rf vendor storage
+    compose_dev down --volumes --rmi local
+    compose_prod build --no-cache
+
+    step "Starting the prod image on port $port"
+    compose_prod up -d --wait --wait-timeout 120
+    compose_prod ps
+    curl --fail --silent "http://localhost:$port/health"
+    echo
+fi
+
+step "Fresh check of $branch passed"
