@@ -18,6 +18,9 @@
         <testsuite name="Integration Tests">
             <directory>tests/Integration</directory>
         </testsuite>
+        <testsuite name="Contract Tests">
+            <directory>tests/Contract</directory>
+        </testsuite>
     </testsuites>
 
     <!-- The whole environment the tests see; force="true" overrides the container's .env, so no test sets variables itself -->
