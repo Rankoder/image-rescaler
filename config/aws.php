@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
     'credentials' => [
         'key'    => getenv('AWS_ACCESS_KEY_ID'),

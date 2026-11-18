@@ -7,5 +7,9 @@ $finder = (new PhpCsFixer\Finder())
     ->append([__DIR__ . '/routes.php', __FILE__]);
 
 return (new PhpCsFixer\Config())
-    ->setRules(['@PER-CS' => true])
+    ->setRiskyAllowed(true)
+    ->setRules([
+        '@PER-CS' => true,
+        'declare_strict_types' => true,
+    ])
     ->setFinder($finder);
