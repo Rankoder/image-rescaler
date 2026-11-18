@@ -132,12 +132,14 @@ Tests and quality tools run in the container as Composer scripts:
 
 ```sh
 docker compose exec web composer test                # all tests; test:unit, test:functional or test:integration for one suite
-docker compose exec web composer phpstan             # static analysis, level max
+docker compose exec web composer phpstan             # static analysis, level max, and architecture rules
 docker compose exec web composer cs                  # code style check (PER-CS); cs:fix applies it
 docker compose exec web composer check               # cs, phpstan and test in one go, as before a PR
 ```
 
 `docker compose exec web composer list` shows them with descriptions. Existing PHPStan errors are recorded in `phpstan-baseline.neon`; new code must pass without adding to it.
+
+The architecture rules are PHPStan rules from phpat, written as classes in `tests/Architecture`: which layer and which packages a layer may not depend on. Calls to I/O functions (`file_put_contents`, `getenv`) and scripts without a class (`resize.php`) are out of their reach and stay with code review.
 
 Unit tests cover single classes, functional tests a service with its external client mocked, integration tests the whole upload through the controller into `storage/`, without mocks. S3 and Dropbox have no integration tests, since they need real accounts.
 
@@ -160,7 +162,7 @@ docker/php.ini             PHP settings: errors to the log, not to responses
 docker/xdebug.ini          Xdebug settings, dev image only
 docs/                      step-by-step guides, linked from this README
 http/                      PhpStorm HTTP client requests (api.http) and environments
-tests/                     Unit, Functional and Integration (PHPUnit); fixtures/ holds the test image
+tests/                     Unit, Functional and Integration (PHPUnit), Architecture (phpat); fixtures/ holds the test image
 phpstan.neon.dist          PHPStan config; phpstan-baseline.neon holds existing errors
 .php-cs-fixer.dist.php     PHP CS Fixer config
 ```
