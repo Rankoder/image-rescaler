@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Functional\Infrastructure\Controllers;
 
-use App\Application\Services\ImageProcessingService;
 use App\Application\Services\StorageServiceFactory;
+use App\Domain\Interfaces\ImageResizer;
 use App\Domain\Interfaces\StorageServiceInterface;
 use App\Domain\ValueObjects\ImageValueObject;
 use Mockery;
@@ -28,18 +28,17 @@ final class ImageControllerTest extends TestCase
 
     private const FIXTURE = __DIR__ . '/../../../fixtures/test_image.jpg';
 
-    private ImageProcessingService&MockInterface $imageProcessing;
+    private ImageResizer&MockInterface $resizer;
     private StorageServiceFactory&MockInterface $storageFactory;
     private StorageServiceInterface&MockInterface $storage;
 
     protected function setUp(): void
     {
-        $this->imageProcessing = Mockery::mock(ImageProcessingService::class);
+        $this->resizer = Mockery::mock(ImageResizer::class);
         $this->storageFactory = Mockery::mock(StorageServiceFactory::class);
         $this->storage = Mockery::mock(StorageServiceInterface::class);
 
-        $this->imageProcessing->shouldReceive('outputFilename')->andReturn('thumbnail.jpg');
-        $this->imageProcessing->shouldReceive('resizeImage')->andReturn(new ImageValueObject('/tmp/thumbnail.jpg', 'thumbnail.jpg'));
+        $this->resizer->shouldReceive('cover')->andReturn(new ImageValueObject('/tmp/thumbnail.jpg', 'thumbnail.jpg'));
     }
 
     /**
@@ -81,7 +80,7 @@ final class ImageControllerTest extends TestCase
 
     public function testInvalidInputNeverReachesProcessingOrStorage(): void
     {
-        $this->imageProcessing->shouldNotReceive('resizeImage');
+        $this->resizer->shouldNotReceive('cover');
         $this->storageFactory->shouldNotReceive('create');
 
         $response = $this->upload('ftp');
@@ -103,7 +102,7 @@ final class ImageControllerTest extends TestCase
             ->withUploadedFiles(['file' => $file])
             ->withParsedBody(['max_width' => '60', 'max_height' => '40', 'service' => $service]);
 
-        return Wiring::imageController(Wiring::resizeAndStoreImage($this->imageProcessing, $this->storageFactory))
+        return Wiring::imageController(Wiring::resizeAndStoreImage($this->resizer, $this->storageFactory))
             ->upload($request);
     }
 }

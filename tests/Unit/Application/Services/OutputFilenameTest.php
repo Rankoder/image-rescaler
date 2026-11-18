@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Application\Services;
 
-use App\Application\Services\ImageProcessingService;
+use App\Application\Services\OutputFilename;
 use App\Application\Validation\ResizeRequest;
 use App\Domain\Enums\ImageFormat;
 use App\Domain\Enums\StorageType;
 use PHPUnit\Framework\TestCase;
 
-final class ImageProcessingServiceOutputFilenameTest extends TestCase
+final class OutputFilenameTest extends TestCase
 {
     public function testUsesTheRequestedNameWithTheExtensionOfTheFormat(): void
     {
@@ -42,6 +42,6 @@ final class ImageProcessingServiceOutputFilenameTest extends TestCase
     {
         $request = new ResizeRequest('/tmp/source', $sourceName, $format, 60, 40, StorageType::Local, $outputFilename);
 
-        return (new ImageProcessingService())->outputFilename($request);
+        return (new OutputFilename())->for($request);
     }
 }

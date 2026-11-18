@@ -7,6 +7,7 @@ namespace App\Application\Services;
 use App\Application\Validation\ResizeInput;
 use App\Application\Validation\ResizeRequestValidator;
 use App\Application\Validation\ValidationFailed;
+use App\Domain\Interfaces\ImageResizer;
 
 /**
  * The resize use case shared by HTTP and the CLI: validate, crop, store.
@@ -15,7 +16,8 @@ final readonly class ResizeAndStoreImage
 {
     public function __construct(
         private ResizeRequestValidator $validator,
-        private ImageProcessingService $imageProcessing,
+        private OutputFilename $outputFilename,
+        private ImageResizer $resizer,
         private StorageServiceFactory $storageFactory,
     ) {}
 
@@ -26,7 +28,12 @@ final readonly class ResizeAndStoreImage
     {
         $request = $this->validator->validate($input);
 
-        $image = $this->imageProcessing->resizeImage($request, $this->imageProcessing->outputFilename($request));
+        $image = $this->resizer->cover(
+            $request->sourcePath,
+            $request->width,
+            $request->height,
+            $this->outputFilename->for($request),
+        );
 
         $storage = $this->storageFactory->create($request->storage->value);
         $path = $storage->upload($image);

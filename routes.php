@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 
-use App\Application\Services\ImageProcessingService;
+use App\Application\Services\OutputFilename;
 use App\Application\Services\ResizeAndStoreImage;
 use App\Application\Services\StorageServiceFactory;
 use App\Application\Validation\ResizeRequestValidator;
+use App\Infrastructure\Image\InterventionImageResizer;
 use App\Infrastructure\Image\LocalImageInspector;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
+use Intervention\Image\ImageManager;
 use Bramus\Router\Router;
 use Dotenv\Dotenv;
 use App\Infrastructure\Controllers\HealthController;
@@ -52,7 +55,8 @@ $router->post('/upload', function () use ($emit) {
     $controller = new ImageController(
         new ResizeAndStoreImage(
             new ResizeRequestValidator(new LocalImageInspector()),
-            new ImageProcessingService(),
+            new OutputFilename(),
+            new InterventionImageResizer(new ImageManager(new GdDriver()), sys_get_temp_dir()),
             new StorageServiceFactory(),
         ),
         $psr17Factory,
