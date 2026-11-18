@@ -63,11 +63,9 @@ All settings come from `.env`:
 | `AWS_REGION` | S3 region, e.g. `eu-central-1` |
 | `AWS_BUCKET_NAME` | target bucket |
 | `DROPBOX_ACCESS_TOKEN` | Dropbox API token |
-| `ALLOWED_IMAGE_TYPES` | MIME types the storage step still checks by extension, `image/jpeg,image/jpg,image/png,image/webp`; without `image/webp` a valid WebP upload fails with `500` |
-| `MAX_FILE_SIZE` | size limit of the storage step in bytes, `5242880` |
 | `INPUT_DIR` | directory the CLI reads images from, `storage/input` by default |
 
-The limits of the API itself (types, size, dimensions) are fixed by the contract, not by these variables. Only the variables of the storage you use need real values.
+The limits of the API (types, size, dimensions) are fixed by the contract, not by configuration. Only the variables of the storage you use need real values.
 
 ## API
 

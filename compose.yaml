@@ -17,7 +17,5 @@ services:
       - AWS_REGION=${AWS_REGION}
       - AWS_BUCKET_NAME=${AWS_BUCKET_NAME}
       - DROPBOX_ACCESS_TOKEN=${DROPBOX_ACCESS_TOKEN}
-      - ALLOWED_IMAGE_TYPES=${ALLOWED_IMAGE_TYPES}
-      - MAX_FILE_SIZE=${MAX_FILE_SIZE}
       # LocalStorageService builds the returned url from it
       - APP_PORT=${APP_PORT:-8080}

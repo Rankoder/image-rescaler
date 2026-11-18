@@ -8,7 +8,7 @@ use App\Application\Services\LocalStorageService;
 use App\Domain\ValueObjects\ImageValueObject;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Exception;
+use RuntimeException;
 
 class LocalStorageServiceTest extends TestCase
 {
@@ -48,8 +48,8 @@ class LocalStorageServiceTest extends TestCase
         $nonExistingFilePath = '/path/to/non_existing_file.jpg';
         $image = new ImageValueObject($nonExistingFilePath, 'non_existing_file.jpg');
 
-        $this->expectException(Exception::class);
-        $this->expectExceptionMessage("The file at path: {$nonExistingFilePath}");
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage("File not found at path: {$nonExistingFilePath}");
 
         $this->service->upload($image);
     }
