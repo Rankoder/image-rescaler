@@ -147,7 +147,7 @@ final class UploadContractTest extends TestCase
         // PHP hands such a request over with no fields and no files
         $request = new ServerRequest('POST', '/upload', [
             'Content-Type' => self::MULTIPART,
-            'Content-Length' => (string) (ini_parse_quantity((string) ini_get('post_max_size')) + 1),
+            'Content-Length' => (string) (Wiring::POST_MAX_SIZE + 1),
         ]);
 
         $this->assertErrors(422, [['file', 'too_large']], $this->send($request));

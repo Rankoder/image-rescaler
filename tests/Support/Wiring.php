@@ -17,6 +17,8 @@ use Nyholm\Psr7\Factory\Psr17Factory;
  */
 final class Wiring
 {
+    public const int POST_MAX_SIZE = 16 * 1024 * 1024;
+
     public static function resizeAndStoreImage(
         ?ImageProcessingService $imageProcessing = null,
         ?StorageServiceFactory $storageFactory = null,
@@ -32,6 +34,11 @@ final class Wiring
     {
         $factory = new Psr17Factory();
 
-        return new ImageController($resizeAndStoreImage ?? self::resizeAndStoreImage(), $factory, $factory);
+        return new ImageController(
+            $resizeAndStoreImage ?? self::resizeAndStoreImage(),
+            $factory,
+            $factory,
+            self::POST_MAX_SIZE,
+        );
     }
 }

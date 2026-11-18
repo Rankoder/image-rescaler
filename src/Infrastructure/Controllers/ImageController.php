@@ -25,6 +25,7 @@ final readonly class ImageController
         private ResizeAndStoreImage $resizeAndStoreImage,
         private ResponseFactoryInterface $responseFactory,
         private StreamFactoryInterface $streamFactory,
+        private int $postMaxSize,
     ) {}
 
     public function upload(ServerRequestInterface $request): ResponseInterface
@@ -94,9 +95,7 @@ final readonly class ImageController
     // PHP drops the whole body of a request over post_max_size and only logs a warning
     private function bodyWasDropped(ServerRequestInterface $request): bool
     {
-        $limit = ini_parse_quantity((string) ini_get('post_max_size'));
-
-        return $limit > 0 && (int) $request->getHeaderLine('Content-Length') > $limit;
+        return $this->postMaxSize > 0 && (int) $request->getHeaderLine('Content-Length') > $this->postMaxSize;
     }
 
     /**

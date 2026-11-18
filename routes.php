@@ -57,6 +57,7 @@ $router->post('/upload', function () use ($emit) {
         ),
         $psr17Factory,
         $psr17Factory,
+        ini_parse_quantity((string) ini_get('post_max_size')),
     );
 
     $emit($controller->upload($request));
