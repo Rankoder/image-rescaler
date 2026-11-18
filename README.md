@@ -147,6 +147,17 @@ Tests take their environment variables from `phpunit.xml`, not from `.env`, and 
 
 To run and debug tests from PhpStorm (Docker interpreter, Xdebug), follow [docs/phpstorm-xdebug.md](docs/phpstorm-xdebug.md).
 
+### Checking a branch from scratch
+
+`bin/fresh-check` runs on the host and checks a pushed branch the way a new clone would see it: it clones the branch into a temporary directory, copies `.env-example` to `.env`, builds the dev image without cache, waits for `GET /health` and runs `composer check`. With `--prod` it then builds the production image and waits until it is healthy. Containers, images and the clone are removed at the end, also after a failure.
+
+```sh
+bin/fresh-check <branch>                # port 8090 by default
+bin/fresh-check --prod <branch> 8091    # also the production image, on port 8091
+```
+
+Besides Docker it needs `git` and `curl` on the host. It runs next to the development container; the port only has to be free. CI runs `composer check` and the production image health check on every push.
+
 ## Project structure
 
 ```
@@ -160,6 +171,7 @@ config/                    S3 config from environment variables (dropbox.php is 
 docker/entrypoint.sh       dev container start: dependencies, storage dir, Apache
 docker/php.ini             PHP settings: errors to the log, not to responses
 docker/xdebug.ini          Xdebug settings, dev image only
+bin/fresh-check            check of a pushed branch from a fresh clone
 docs/                      step-by-step guides, linked from this README
 http/                      PhpStorm HTTP client requests (api.http) and environments
 tests/                     Unit, Functional and Integration (PHPUnit), Architecture (phpat); fixtures/ holds the test image
