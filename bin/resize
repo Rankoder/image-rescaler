@@ -1,0 +1,28 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use App\Application\Services\ImageProcessingService;
+use App\Application\Services\ResizeAndStoreImage;
+use App\Application\Services\StorageServiceFactory;
+use App\Application\Validation\ResizeRequestValidator;
+use App\Infrastructure\Cli\InputDirectory;
+use App\Infrastructure\Cli\ResizeCommand;
+use App\Infrastructure\Image\LocalImageInspector;
+use Dotenv\Dotenv;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+Dotenv::createImmutable(__DIR__ . '/..')->load();
+
+$command = new ResizeCommand(
+    new ResizeAndStoreImage(
+        new ResizeRequestValidator(new LocalImageInspector()),
+        new ImageProcessingService(),
+        new StorageServiceFactory(),
+    ),
+    new InputDirectory(getenv('INPUT_DIR') ?: __DIR__ . '/../storage/input'),
+);
+
+exit($command->run(getopt('f:w:h:s:o:') ?: [], STDOUT, STDERR));

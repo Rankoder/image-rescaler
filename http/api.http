@@ -63,19 +63,39 @@ Content-Disposition: form-data; name="max_height"
 --boundary--
 
 > {%
-    client.test("error naming the file type", () => {
+    client.test("422 with unsupported_type for the file", () => {
+        client.assert(response.status === 422);
         client.assert(response.body.status === "error");
-        client.assert(response.body.message.startsWith("Invalid image file type: txt"));
+        client.assert(response.body.errors[0].field === "file");
+        client.assert(response.body.errors[0].code === "unsupported_type");
     });
 %}
 
 ### Upload without the required fields
 POST {{baseUrl}}/upload
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="service"
+
+local
+--boundary--
 
 > {%
-    client.test("400 with an error", () => {
+    client.test("422 with every missing field at once", () => {
+        client.assert(response.status === 422);
+        const codes = response.body.errors.map(error => error.field + ":" + error.code);
+        client.assert(codes.join(",") === "file:required,max_width:required,max_height:required");
+    });
+%}
+
+### Upload without multipart
+POST {{baseUrl}}/upload
+
+> {%
+    client.test("400 with malformed_request", () => {
         client.assert(response.status === 400);
-        client.assert(response.body.status === "error");
+        client.assert(response.body.errors[0].code === "malformed_request");
     });
 %}
 

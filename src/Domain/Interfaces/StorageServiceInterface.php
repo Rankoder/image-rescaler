@@ -15,4 +15,6 @@ interface StorageServiceInterface
      * @return string The URL or path of the uploaded file.
      */
     public function upload(ImageValueObject $image): string;
+
+    public function getPublicUrl(string $filePath): string;
 }

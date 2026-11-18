@@ -19,7 +19,5 @@ services:
       - DROPBOX_ACCESS_TOKEN=${DROPBOX_ACCESS_TOKEN}
       - ALLOWED_IMAGE_TYPES=${ALLOWED_IMAGE_TYPES}
       - MAX_FILE_SIZE=${MAX_FILE_SIZE}
-      - MAX_IMAGE_WIDTH=${MAX_IMAGE_WIDTH}
-      - MAX_IMAGE_HEIGHT=${MAX_IMAGE_HEIGHT}
       # LocalStorageService builds the returned url from it
       - APP_PORT=${APP_PORT:-8080}

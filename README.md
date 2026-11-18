@@ -1,6 +1,6 @@
 # Image Rescaler
 
-A plain-PHP REST API and CLI tool that scales an image down to a thumbnail and stores it in the chosen storage: local filesystem, Amazon S3 or Dropbox.
+A plain-PHP REST API and CLI tool that crops an image to a thumbnail of exactly the requested size and stores it in the chosen storage: local filesystem, Amazon S3 or Dropbox.
 
 ## Requirements
 
@@ -21,7 +21,7 @@ Check that it responds:
 
 ```sh
 curl -X POST http://localhost:8080/upload
-# {"status":"error","message":"Invalid request parameters"}
+# {"status":"error","errors":[{"field":null,"code":"malformed_request","message":"The request must be multipart\/form-data."}]}
 ```
 
 PHP errors and warnings are never shown in responses; they go to the container log:
@@ -63,13 +63,15 @@ All settings come from `.env`:
 | `AWS_REGION` | S3 region, e.g. `eu-central-1` |
 | `AWS_BUCKET_NAME` | target bucket |
 | `DROPBOX_ACCESS_TOKEN` | Dropbox API token |
-| `ALLOWED_IMAGE_TYPES` | comma-separated MIME types, e.g. `image/jpeg,image/png` |
-| `MAX_FILE_SIZE` | maximum upload size in bytes |
-| `MAX_IMAGE_WIDTH`, `MAX_IMAGE_HEIGHT` | upper limit for the requested dimensions |
+| `ALLOWED_IMAGE_TYPES` | MIME types the storage step still checks by extension, `image/jpeg,image/jpg,image/png,image/webp`; without `image/webp` a valid WebP upload fails with `500` |
+| `MAX_FILE_SIZE` | size limit of the storage step in bytes, `5242880` |
+| `INPUT_DIR` | directory the CLI reads images from, `storage/input` by default |
 
-Only the variables of the storage you use need real values.
+The limits of the API itself (types, size, dimensions) are fixed by the contract, not by these variables. Only the variables of the storage you use need real values.
 
 ## API
+
+The contract is [openapi.yaml](openapi.yaml) (OpenAPI 3.0): fields, limits, responses and error codes. Contract tests check the responses against it.
 
 Any other path or method returns `404` with `{"status": "error", "message": "Not found"}`.
 
@@ -87,11 +89,13 @@ Tells whether the application is up; meant for container health checks and monit
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `file` | yes | image to scale |
-| `max_width` | yes | maximum width in px; the image is scaled down to fit `max_width` × `max_height`, keeping its aspect ratio, and never enlarged |
-| `max_height` | yes | maximum height in px |
+| `file` | yes | JPEG, PNG or WebP, at most 5 MB and 5000 × 5000 px; the type is read from the content and the extension must match it |
+| `max_width` | yes | width of the frame, 40–5000 px |
+| `max_height` | yes | height of the frame, 40–5000 px |
 | `service` | no | `local` (default), `s3` or `dropbox` |
-| `output_filename` | no | name of the stored file; a `_v<n>` suffix is added to keep names unique |
+| `output_filename` | no | letters, digits, `-` and `_`, up to 100 characters; a `_v<n>` suffix keeps names unique |
+
+The image is scaled down until it covers the frame and the overflow is cut off evenly, so the result has exactly the frame's size and the source's format. An image smaller than the frame is rejected rather than enlarged.
 
 ```sh
 curl -X POST http://localhost:8080/upload \
@@ -108,30 +112,44 @@ Success (`200`):
 {"status": "success", "path": "thumbnail_v1.jpg", "url": "http://localhost:8080/thumbnail_v1.jpg"}
 ```
 
-Errors return `{"status": "error", "message": "..."}` with `400` for missing or invalid fields and `500` for everything else.
+Invalid fields return `422` with all errors at once; a request that is not `multipart/form-data` returns `400` in the same shape:
+
+```json
+{"status": "error", "errors": [
+  {"field": "file", "code": "smaller_than_frame", "message": "The image is 150 × 150 px; it must be at least 200 × 150 px to fill the frame."},
+  {"field": "service", "code": "unsupported", "message": "service must be one of: local, s3, dropbox."}
+]}
+```
+
+The codes are listed in [openapi.yaml](openapi.yaml). Processing and storage failures return `500` with `{"status": "error", "message": "..."}`.
 
 To send these requests from PhpStorm, with ready examples and checks of the responses, follow [docs/phpstorm-http-client.md](docs/phpstorm-http-client.md).
 
 ## CLI
 
+The CLI reads images only from the input directory, `storage/input/` (`INPUT_DIR` overrides it), and goes through the same validation and processing as the API:
+
 ```sh
-docker compose exec web php src/Application/CLI/resize.php \
-  -f <file_path> -w <max_width> -h <max_height> [-s <service>] [-o <output_filename>]
+cp photo.jpg storage/input/
+docker compose exec web bin/resize -f photo.jpg -w 200 -h 150 -o thumbnail
+# Stored thumbnail_v1.jpg
 ```
 
 | Option | Description |
 |--------|-------------|
-| `-f` | path to the image inside the container, e.g. `/var/www/html/storage/photo.jpg` |
-| `-w`, `-h` | maximum width and height in px, scaled as in the API |
+| `-f` | file name in the input directory; a name leading outside it (`../`, an absolute path, a symlink) is rejected |
+| `-w`, `-h` | width and height of the frame in px, as `max_width` and `max_height` in the API |
 | `-s` | `local` (default), `s3` or `dropbox` |
-| `-o` | name of the stored file |
+| `-o` | name of the stored file, as `output_filename` in the API |
+
+Invalid options are all reported on stderr, one line per option, and the exit code is `1`.
 
 ## Development
 
 Tests and quality tools run in the container as Composer scripts:
 
 ```sh
-docker compose exec web composer test                # all tests; test:unit, test:functional or test:integration for one suite
+docker compose exec web composer test                # all tests; test:unit, test:functional, test:integration or test:contract for one suite
 docker compose exec web composer phpstan             # static analysis, level max, and architecture rules
 docker compose exec web composer cs                  # code style check (PER-CS); cs:fix applies it
 docker compose exec web composer check               # cs, phpstan and test in one go, as before a PR
@@ -139,9 +157,9 @@ docker compose exec web composer check               # cs, phpstan and test in o
 
 `docker compose exec web composer list` shows them with descriptions. Existing PHPStan errors are recorded in `phpstan-baseline.neon`; new code must pass without adding to it.
 
-The architecture rules are PHPStan rules from phpat, written as classes in `tests/Architecture`: which layer and which packages a layer may not depend on. Calls to I/O functions (`file_put_contents`, `getenv`) and scripts without a class (`resize.php`) are out of their reach and stay with code review.
+The architecture rules are PHPStan rules from phpat, written as classes in `tests/Architecture`: which layer and which packages a layer may not depend on. Calls to I/O functions (`file_put_contents`, `getenv`) and scripts without a class (`bin/resize`, `routes.php`) are out of their reach and stay with code review.
 
-Unit tests cover single classes, functional tests a service with its external client mocked, integration tests the whole upload through the controller into `storage/`, without mocks. S3 and Dropbox have no integration tests, since they need real accounts.
+Unit tests cover single classes, functional tests a service with its external client mocked, integration tests the whole upload through the controller into `storage/`, without mocks. Contract tests send one request per rule of `openapi.yaml` and check every response against it. S3 and Dropbox have no integration tests, since they need real accounts.
 
 Tests take their environment variables from `phpunit.xml`, not from `.env`, and run in random order, so they cannot lean on each other. PHPUnit prints the seed; `docker compose exec web vendor/bin/phpunit --order-by random --random-order-seed <seed>` repeats that order.
 
@@ -162,19 +180,20 @@ Besides Docker it needs `git` and `curl` on the host. It runs next to the develo
 
 ```
 src/
-├── Domain/                interfaces and value objects
-├── Application/           image processing, validation, storage services
-│   └── CLI/resize.php     CLI entry point
-└── Infrastructure/        HTTP controllers
+├── Domain/                enums, value objects and interfaces
+├── Application/           the resize use case, its validation, image processing, storage services
+└── Infrastructure/        HTTP controllers, the CLI command and input directory, image inspection
 public/index.php           HTTP entry point → routes.php → controllers (bramus/router)
+bin/resize                 CLI entry point
+openapi.yaml               API contract
 config/                    S3 config from environment variables (dropbox.php is unused; Dropbox reads getenv directly)
-docker/entrypoint.sh       dev container start: dependencies, storage dir, Apache
+docker/entrypoint.sh       dev container start: dependencies, storage and input dirs, Apache
 docker/php.ini             PHP settings: errors to the log, not to responses
 docker/xdebug.ini          Xdebug settings, dev image only
 bin/fresh-check            check of a pushed branch from a fresh clone
 docs/                      step-by-step guides, linked from this README
 http/                      PhpStorm HTTP client requests (api.http) and environments
-tests/                     Unit, Functional and Integration (PHPUnit), Architecture (phpat); fixtures/ holds the test image
+tests/                     Unit, Functional, Integration and Contract (PHPUnit), Architecture (phpat); Support/ holds helpers, fixtures/ the test image
 phpstan.neon.dist          PHPStan config; phpstan-baseline.neon holds existing errors
 .php-cs-fixer.dist.php     PHP CS Fixer config
 ```
@@ -182,7 +201,6 @@ phpstan.neon.dist          PHPStan config; phpstan-baseline.neon holds existing 
 ## Known limitations
 
 - The `url` returned for `local` storage is not served by the web server.
-- The CLI does not validate the input file the way the API does.
 
 ## License
 

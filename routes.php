@@ -2,7 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Application\Services\ImageProcessingService;
+use App\Application\Services\ResizeAndStoreImage;
+use App\Application\Services\StorageServiceFactory;
+use App\Application\Validation\ResizeRequestValidator;
+use App\Infrastructure\Image\LocalImageInspector;
 use Bramus\Router\Router;
+use Dotenv\Dotenv;
 use App\Infrastructure\Controllers\HealthController;
 use App\Infrastructure\Controllers\ImageController;
 use App\Infrastructure\Controllers\NotFoundController;
@@ -39,8 +45,20 @@ $router->post('/upload', function () use ($emit) {
         $psr17Factory,
     );
 
+    // As before this change, an upload fails without a .env file
+    Dotenv::createImmutable(__DIR__)->load();
+
     $request = $creator->fromGlobals();
-    $controller = new ImageController();
+    $controller = new ImageController(
+        new ResizeAndStoreImage(
+            new ResizeRequestValidator(new LocalImageInspector()),
+            new ImageProcessingService(),
+            new StorageServiceFactory(),
+        ),
+        $psr17Factory,
+        $psr17Factory,
+        ini_parse_quantity((string) ini_get('post_max_size')),
+    );
 
     $emit($controller->upload($request));
 });

@@ -1,0 +1,186 @@
+openapi: 3.0.3
+
+info:
+  title: Image Rescaler
+  version: 1.0.0
+  description: |
+    Crops an image to fill the requested frame exactly, without enlarging it, and stores the
+    result in local storage, Amazon S3 or Dropbox.
+
+servers:
+  - url: http://localhost:8080
+
+paths:
+  /health:
+    get:
+      summary: Tells whether the application is up
+      responses:
+        '200':
+          description: The application is up
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                additionalProperties: false
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+
+  /upload:
+    post:
+      summary: Crops an image to the frame and stores it
+      description: |
+        The image is scaled down until it covers the frame `max_width` × `max_height`, then the
+        overflow is cut off evenly on both sides, so the result has exactly the frame's size.
+        The source is never enlarged: an image smaller than the frame in either dimension is
+        rejected. The result keeps the source format.
+
+        All field errors are reported at once.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, max_width, max_height]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: |
+                    JPEG, PNG or WebP, at most 5 MB (5 242 880 bytes) and 5000 × 5000 px, in no
+                    dimension smaller than the frame. The type is read from the content, and the
+                    file name's extension must match it (`.jpg` or `.jpeg` for JPEG).
+                max_width:
+                  type: integer
+                  minimum: 40
+                  maximum: 5000
+                  description: Width of the frame in px
+                max_height:
+                  type: integer
+                  minimum: 40
+                  maximum: 5000
+                  description: Height of the frame in px
+                service:
+                  type: string
+                  enum: [local, s3, dropbox]
+                  default: local
+                output_filename:
+                  type: string
+                  pattern: '^[A-Za-z0-9_-]{1,100}$'
+                  description: |
+                    Name of the stored file without extension. A `_v<n>` suffix keeps names
+                    unique (`_v1`, `_v2`, …), so nothing is overwritten.
+      responses:
+        '200':
+          description: The image is stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: The request is not `multipart/form-data`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '422':
+          description: One or more fields are missing or invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '500':
+          description: Processing or storage failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+
+components:
+  schemas:
+    Success:
+      type: object
+      required: [status, path, url]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [success]
+        path:
+          type: string
+          example: thumbnail_v1.jpg
+        url:
+          type: string
+          example: http://localhost:8080/thumbnail_v1.jpg
+
+    ValidationError:
+      type: object
+      required: [status, errors]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [error]
+        errors:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Error'
+
+    Error:
+      type: object
+      required: [field, code, message]
+      additionalProperties: false
+      properties:
+        field:
+          type: string
+          nullable: true
+          enum: [file, max_width, max_height, service, output_filename, null]
+          description: The field the error is about; `null` for an error of the whole request
+        code:
+          type: string
+          enum:
+            - malformed_request
+            - required
+            - empty
+            - too_large
+            - unsupported_type
+            - extension_mismatch
+            - dimensions_too_large
+            - smaller_than_frame
+            - not_integer
+            - out_of_range
+            - invalid_characters
+            - too_long
+            - unsupported
+          description: |
+            - `malformed_request`: the request is not `multipart/form-data` (400, `field` is `null`)
+            - `required`: the field is missing
+            - `empty`: the file has no content
+            - `too_large`: the file is over 5 MB
+            - `unsupported_type`: the content is not JPEG, PNG or WebP
+            - `extension_mismatch`: the file name's extension does not match the content
+            - `dimensions_too_large`: the image is over 5000 px in a dimension
+            - `smaller_than_frame`: the image is smaller than the frame in a dimension
+            - `not_integer`: `max_width` or `max_height` is not a whole number
+            - `out_of_range`: `max_width` or `max_height` is outside 40–5000
+            - `invalid_characters`: `output_filename` holds other characters than letters, digits, `-` and `_`
+            - `too_long`: `output_filename` is over 100 characters
+            - `unsupported`: `service` is not `local`, `s3` or `dropbox`
+        message:
+          type: string
+          example: The image must be at least 200 × 150 px to fill the frame.
+
+    ServerError:
+      type: object
+      required: [status, message]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [error]
+        message:
+          type: string

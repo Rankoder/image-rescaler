@@ -6,7 +6,8 @@ RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    libwebp-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install gd \
     && docker-php-ext-install fileinfo
 
@@ -84,8 +85,9 @@ COPY config ./config
 COPY public ./public
 COPY src ./src
 COPY routes.php ./
+COPY bin/resize ./bin/
 
-RUN install -d -o www-data -g www-data storage
+RUN install -d -o www-data -g www-data storage storage/input
 
 USER www-data
 

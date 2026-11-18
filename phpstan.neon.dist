@@ -1,6 +1,7 @@
 includes:
     - phpstan-baseline.neon
     - vendor/phpat/phpat/extension.neon
+    - vendor/phpstan/phpstan-mockery/extension.neon
 
 parameters:
     level: max
@@ -10,6 +11,7 @@ parameters:
         - src
         - tests
         - routes.php
+        - bin/resize
     phpat:
         show_rule_names: true
 

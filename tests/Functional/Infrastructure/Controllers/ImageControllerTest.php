@@ -4,155 +4,106 @@ declare(strict_types=1);
 
 namespace Tests\Functional\Infrastructure\Controllers;
 
+use App\Application\Services\ImageProcessingService;
+use App\Application\Services\StorageServiceFactory;
+use App\Domain\Interfaces\StorageServiceInterface;
+use App\Domain\ValueObjects\ImageValueObject;
+use Mockery;
+use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
+use Mockery\MockInterface;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\ServerRequest;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Mockery;
-use App\Application\Services\ImageProcessingService;
-use App\Application\Services\StorageServiceFactory;
-use App\Application\Services\ImageValidationService;
-use Psr\Http\Message\UploadedFileInterface;
-use App\Domain\ValueObjects\ImageValueObject;
-use App\Infrastructure\Controllers\ImageController;
+use Psr\Http\Message\ResponseInterface;
+use RuntimeException;
+use Tests\Support\Wiring;
 
-class ImageControllerTest extends TestCase
+/**
+ * The controller with real validation and the processing and storage mocked, so S3 and Dropbox need no accounts.
+ */
+final class ImageControllerTest extends TestCase
 {
-    private $psr17Factory;
-    private $imageProcessingServiceMock;
-    private $storageServiceFactoryMock;
-    private $imageValidationServiceMock;
-    private $controller;
-    private string $tempFilePath;
+    use MockeryPHPUnitIntegration;
+
+    private const FIXTURE = __DIR__ . '/../../../fixtures/test_image.jpg';
+
+    private ImageProcessingService&MockInterface $imageProcessing;
+    private StorageServiceFactory&MockInterface $storageFactory;
+    private StorageServiceInterface&MockInterface $storage;
 
     protected function setUp(): void
     {
-        ini_set('memory_limit', '256M'); // Set higher memory limit
+        $this->imageProcessing = Mockery::mock(ImageProcessingService::class);
+        $this->storageFactory = Mockery::mock(StorageServiceFactory::class);
+        $this->storage = Mockery::mock(StorageServiceInterface::class);
 
-        $this->psr17Factory = new Psr17Factory();
-
-        $this->imageProcessingServiceMock = Mockery::mock(ImageProcessingService::class);
-        $this->storageServiceFactoryMock = Mockery::mock(StorageServiceFactory::class);
-        $this->imageValidationServiceMock = Mockery::mock(ImageValidationService::class);
-
-        // Create controller instance with mocks
-        $this->controller = new ImageController();
-        $reflection = new \ReflectionClass($this->controller);
-        $properties = [
-            'psr17Factory' => $this->psr17Factory,
-            'imageProcessingService' => $this->imageProcessingServiceMock,
-            'storageServiceFactory' => $this->storageServiceFactoryMock,
-            'imageValidationService' => $this->imageValidationServiceMock,
-        ];
-        foreach ($properties as $property => $mock) {
-            $reflectedProperty = $reflection->getProperty($property);
-            $reflectedProperty->setValue($this->controller, $mock);
-        }
-
-        // Create a temporary test image file
-        $this->tempFilePath = sys_get_temp_dir() . '/test_image.jpg';
-        $this->createTestImage($this->tempFilePath);
+        $this->imageProcessing->shouldReceive('outputFilename')->andReturn('thumbnail.jpg');
+        $this->imageProcessing->shouldReceive('resizeImage')->andReturn(new ImageValueObject('/tmp/thumbnail.jpg', 'thumbnail.jpg'));
     }
 
-    #[DataProvider('uploadDataProvider')]
-    public function testUpload(array $uploadedFiles, array $parsedBody, int $expectedStatusCode, string $expectedResponseMessage): void
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function services(): iterable
     {
-        $request = new ServerRequest('POST', '/upload', [], null, '1.1', $_SERVER);
-        $request = $request->withUploadedFiles($uploadedFiles)
-            ->withParsedBody($parsedBody);
-
-        if ($expectedStatusCode === 200) {
-            $fileArray = [
-                'tmp_name' => $uploadedFiles['file']->getStream()->getMetadata('uri'),
-                'name' => $uploadedFiles['file']->getClientFilename(),
-            ];
-
-            $this->imageValidationServiceMock->shouldReceive('validate')->once()->with($fileArray, $parsedBody['max_width'], $parsedBody['max_height']);
-            $this->imageProcessingServiceMock->shouldReceive('generateUniqueFilename')->once()->andReturn('unique_filename.jpg');
-            $this->imageProcessingServiceMock->shouldReceive('resizeImage')->once()->andReturn(new ImageValueObject('/tmp/unique_filename.jpg', 'unique_filename.jpg'));
-
-            $storageServiceMock = Mockery::mock(\App\Domain\Interfaces\StorageServiceInterface::class);
-            $this->storageServiceFactoryMock->shouldReceive('create')->andReturn($storageServiceMock);
-            $storageServiceMock->shouldReceive('upload')->andReturn('uploaded/unique_filename.jpg');
-            $storageServiceMock->shouldReceive('getPublicUrl')->andReturn('http://localhost/uploaded/unique_filename.jpg');
-        }
-
-        $response = $this->controller->upload($request);
-
-        $this->assertSame($expectedStatusCode, $response->getStatusCode());
-        $this->assertStringContainsString($expectedResponseMessage, (string) $response->getBody());
+        yield 'local' => ['local'];
+        yield 's3' => ['s3'];
+        yield 'dropbox' => ['dropbox'];
     }
 
-    public static function uploadDataProvider(): array
+    #[DataProvider('services')]
+    public function testStoresInTheChosenServiceAndAnswersWithItsPathAndUrl(string $service): void
     {
-        $stream = Mockery::mock(\Psr\Http\Message\StreamInterface::class);
-        $stream->shouldReceive('getMetadata')->andReturn('/tmp/test_image.jpg');
+        $this->storageFactory->shouldReceive('create')->once()->with($service)->andReturn($this->storage);
+        $this->storage->shouldReceive('upload')->once()->andReturn('thumbnail_v1.jpg');
+        $this->storage->shouldReceive('getPublicUrl')->with('thumbnail_v1.jpg')->andReturn('https://storage.test/thumbnail_v1.jpg');
 
-        $uploadedFile = Mockery::mock(UploadedFileInterface::class);
-        $uploadedFile->shouldReceive('getStream')->andReturn($stream);
-        $uploadedFile->shouldReceive('getClientFilename')->andReturn('test_image.jpg');
+        $response = $this->upload($service);
 
-        return [
-            'valid request' => [
-                'uploadedFiles' => ['file' => $uploadedFile],
-                'parsedBody' => [
-                    'service' => 'local',
-                    'max_width' => 4000,
-                    'max_height' => 3000,
-                    'output_filename' => '',
-                ],
-                'expectedStatusCode' => 200,
-                'expectedResponseMessage' => 'success',
-            ],
-            'invalid request parameters' => [
-                'uploadedFiles' => [],
-                'parsedBody' => [
-                    'service' => 'local',
-                    'max_width' => 4000,
-                    'max_height' => 3000,
-                    'output_filename' => '',
-                ],
-                'expectedStatusCode' => 400,
-                'expectedResponseMessage' => 'Invalid request parameters',
-            ],
-            's3 upload' => [
-                'uploadedFiles' => ['file' => $uploadedFile],
-                'parsedBody' => [
-                    'service' => 's3',
-                    'max_width' => 4000,
-                    'max_height' => 3000,
-                    'output_filename' => '',
-                ],
-                'expectedStatusCode' => 200,
-                'expectedResponseMessage' => 'success',
-            ],
-            'dropbox upload' => [
-                'uploadedFiles' => ['file' => $uploadedFile],
-                'parsedBody' => [
-                    'service' => 'dropbox',
-                    'max_width' => 4000,
-                    'max_height' => 3000,
-                    'output_filename' => '',
-                ],
-                'expectedStatusCode' => 200,
-                'expectedResponseMessage' => 'success',
-            ],
-        ];
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame(
+            '{"status":"success","path":"thumbnail_v1.jpg","url":"https:\/\/storage.test\/thumbnail_v1.jpg"}',
+            (string) $response->getBody(),
+        );
     }
 
-    private function createTestImage(string $path): void
+    public function testAStorageFailureIsAServerError(): void
     {
-        $image = imagecreatetruecolor(100, 100);
-        $backgroundColor = imagecolorallocate($image, 255, 255, 255);
-        imagefill($image, 0, 0, $backgroundColor);
-        imagejpeg($image, $path);
+        $this->storageFactory->shouldReceive('create')->andReturn($this->storage);
+        $this->storage->shouldReceive('upload')->andThrow(new RuntimeException('Storage is down'));
+
+        $response = $this->upload('local');
+
+        $this->assertSame(500, $response->getStatusCode());
+        $this->assertSame('{"status":"error","message":"Storage is down"}', (string) $response->getBody());
     }
 
-    protected function tearDown(): void
+    public function testInvalidInputNeverReachesProcessingOrStorage(): void
     {
-        if (file_exists($this->tempFilePath)) {
-            unlink($this->tempFilePath);
-        }
-        Mockery::close();
+        $this->imageProcessing->shouldNotReceive('resizeImage');
+        $this->storageFactory->shouldNotReceive('create');
+
+        $response = $this->upload('ftp');
+
+        $this->assertSame(422, $response->getStatusCode());
+    }
+
+    private function upload(string $service): ResponseInterface
+    {
+        $factory = new Psr17Factory();
+        $file = $factory->createUploadedFile(
+            $factory->createStreamFromFile(self::FIXTURE),
+            (int) filesize(self::FIXTURE),
+            UPLOAD_ERR_OK,
+            'photo.jpg',
+        );
+
+        $request = (new ServerRequest('POST', '/upload', ['Content-Type' => 'multipart/form-data; boundary=test']))
+            ->withUploadedFiles(['file' => $file])
+            ->withParsedBody(['max_width' => '60', 'max_height' => '40', 'service' => $service]);
+
+        return Wiring::imageController(Wiring::resizeAndStoreImage($this->imageProcessing, $this->storageFactory))
+            ->upload($request);
     }
 }
