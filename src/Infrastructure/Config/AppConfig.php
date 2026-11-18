@@ -17,6 +17,7 @@ final readonly class AppConfig
         public int $postMaxSize,
         public AwsConfig $aws,
         public string $dropboxAccessToken,
+        public string $dropboxDirectory,
     ) {}
 
     /**
@@ -39,6 +40,7 @@ final readonly class AppConfig
                 $value('AWS_BUCKET_NAME'),
             ),
             $value('DROPBOX_ACCESS_TOKEN'),
+            rtrim($value('DROPBOX_DIRECTORY', '/Aplikacje/image-rescaler'), '/'),
         );
     }
 }

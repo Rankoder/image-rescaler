@@ -134,6 +134,9 @@ final readonly class Container
             throw new RuntimeException('Dropbox access token is not set.');
         }
 
-        return new DropboxStorageService(new Dropbox(new DropboxApp('', '', $config->dropboxAccessToken)));
+        return new DropboxStorageService(
+            new Dropbox(new DropboxApp('', '', $config->dropboxAccessToken)),
+            $config->dropboxDirectory,
+        );
     }
 }

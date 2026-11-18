@@ -63,6 +63,7 @@ All settings come from `.env`: Compose passes them to the container as environme
 | `AWS_REGION` | S3 region, e.g. `eu-central-1` |
 | `AWS_BUCKET_NAME` | target bucket |
 | `DROPBOX_ACCESS_TOKEN` | Dropbox API token |
+| `DROPBOX_DIRECTORY` | Dropbox folder the images go to, `/Aplikacje/image-rescaler` by default |
 | `INPUT_DIR` | directory the CLI reads images from, `storage/input` by default |
 
 The limits of the API (types, size, dimensions) are fixed by the contract, not by configuration. Only the variables of the storage you use need real values.
