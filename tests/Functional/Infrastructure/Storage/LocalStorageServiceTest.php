@@ -78,6 +78,6 @@ final class LocalStorageServiceTest extends TestCase
 
     public function testThePublicUrlStartsWithTheConfiguredBase(): void
     {
-        $this->assertSame('http://images.test:8081/thumb_v1.jpg', $this->service->getPublicUrl('thumb_v1.jpg'));
+        $this->assertSame('http://images.test:8081/files/thumb_v1.jpg', $this->service->getPublicUrl('thumb_v1.jpg'));
     }
 }

@@ -197,7 +197,6 @@ phpstan.neon.dist          PHPStan config
 
 ## Known limitations
 
-- The `url` returned for `local` storage is not served by the web server.
 
 ## License
 

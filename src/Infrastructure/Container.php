@@ -13,6 +13,7 @@ use App\Domain\Interfaces\StorageRegistry;
 use App\Infrastructure\Cli\InputDirectory;
 use App\Infrastructure\Cli\ResizeCommand;
 use App\Infrastructure\Config\AppConfig;
+use App\Infrastructure\Controllers\FileController;
 use App\Infrastructure\Controllers\HealthController;
 use App\Infrastructure\Controllers\ImageController;
 use App\Infrastructure\Controllers\NotFoundController;
@@ -57,6 +58,16 @@ final readonly class Container
     public function notFoundController(): NotFoundController
     {
         return new NotFoundController($this->httpFactory, $this->httpFactory);
+    }
+
+    public function fileController(): FileController
+    {
+        return new FileController(
+            $this->config->storageDirectory,
+            $this->httpFactory,
+            $this->httpFactory,
+            $this->notFoundController(),
+        );
     }
 
     public function imageController(): ImageController
