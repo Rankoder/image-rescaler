@@ -85,6 +85,7 @@ COPY config ./config
 COPY public ./public
 COPY src ./src
 COPY routes.php ./
+COPY bin/resize ./bin/
 
 RUN install -d -o www-data -g www-data storage
 

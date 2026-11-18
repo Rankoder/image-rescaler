@@ -1,24 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Function App\\Application\\CLI\\getCommandLineOptions\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Application/CLI/resize.php
-
-		-
-			message: '#^Function App\\Application\\CLI\\resizeAndUploadImage\(\) has parameter \$options with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Application/CLI/resize.php
-
-		-
-			message: '#^Function App\\Application\\CLI\\validateOptions\(\) has parameter \$options with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Application/CLI/resize.php
-
-		-
 			message: '#^Method App\\Application\\Services\\AbstractStorageService\:\:getAllowedExtensions\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1

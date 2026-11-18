@@ -11,6 +11,7 @@ parameters:
         - src
         - tests
         - routes.php
+        - bin/resize
     phpat:
         show_rule_names: true
 
