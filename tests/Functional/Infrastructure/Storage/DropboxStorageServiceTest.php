@@ -8,6 +8,7 @@ use App\Domain\ValueObjects\ImageValueObject;
 use App\Infrastructure\Storage\DropboxStorageService;
 use Kunnu\Dropbox\Dropbox;
 use Kunnu\Dropbox\DropboxFile;
+use Kunnu\Dropbox\DropboxResponse;
 use Kunnu\Dropbox\Exceptions\DropboxClientException;
 use Kunnu\Dropbox\Models\FileMetadata;
 use Mockery;
@@ -82,5 +83,51 @@ final class DropboxStorageServiceTest extends TestCase
         } catch (RuntimeException $exception) {
             $this->assertSame($cause, $exception->getPrevious());
         }
+    }
+
+    public function testThePublicUrlIsANewSharedLinkToTheFile(): void
+    {
+        $this->dropbox->shouldReceive('postToAPI')
+            ->once()
+            ->with('/sharing/create_shared_link_with_settings', ['path' => '/Apps/thumbnails/thumb_v1.jpg'])
+            ->andReturn($this->response(['url' => 'https://www.dropbox.com/s/abc/thumb_v1.jpg?dl=0']));
+
+        $this->assertSame('https://www.dropbox.com/s/abc/thumb_v1.jpg?dl=0', $this->service->getPublicUrl('thumb_v1.jpg'));
+    }
+
+    public function testAnExistingSharedLinkIsReused(): void
+    {
+        $this->dropbox->shouldReceive('postToAPI')
+            ->with('/sharing/create_shared_link_with_settings', Mockery::any())
+            ->andThrow(new DropboxClientException('{"error_summary": "shared_link_already_exists/.."}', 409));
+        $this->dropbox->shouldReceive('postToAPI')
+            ->with('/sharing/list_shared_links', ['path' => '/Apps/thumbnails/thumb_v1.jpg', 'direct_only' => true])
+            ->andReturn($this->response(['links' => [['url' => 'https://www.dropbox.com/s/old/thumb_v1.jpg?dl=0']]]));
+
+        $this->assertSame('https://www.dropbox.com/s/old/thumb_v1.jpg?dl=0', $this->service->getPublicUrl('thumb_v1.jpg'));
+    }
+
+    public function testAFailedLinkKeepsItsCause(): void
+    {
+        $cause = new DropboxClientException('{"error_summary": "missing_scope/"}', 401);
+        $this->dropbox->shouldReceive('postToAPI')->andThrow($cause);
+
+        try {
+            $this->service->getPublicUrl('thumb_v1.jpg');
+            $this->fail('No exception was thrown.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame($cause, $exception->getPrevious());
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     */
+    private function response(array $body): DropboxResponse&MockInterface
+    {
+        $response = Mockery::mock(DropboxResponse::class);
+        $response->shouldReceive('getDecodedBody')->andReturn($body);
+
+        return $response;
     }
 }

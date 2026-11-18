@@ -62,7 +62,7 @@ All settings come from `.env`: Compose passes them to the container as environme
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | S3 credentials |
 | `AWS_REGION` | S3 region, e.g. `eu-central-1` |
 | `AWS_BUCKET_NAME` | target bucket |
-| `DROPBOX_ACCESS_TOKEN` | Dropbox API token |
+| `DROPBOX_ACCESS_TOKEN` | Dropbox API token; the app needs the `files.content.write`, `files.metadata.read` and `sharing.write` scopes, the last one for the returned link |
 | `DROPBOX_DIRECTORY` | Dropbox folder the images go to, `/Aplikacje/image-rescaler` by default |
 | `INPUT_DIR` | directory the CLI reads images from, `storage/input` by default |
 

@@ -19,7 +19,24 @@ final class DropboxStorageService extends AbstractStorageService
 
     public function getPublicUrl(string $filePath): string
     {
-        return 'https://www.dropbox.com/home/' . $filePath;
+        $path = $this->path($filePath);
+
+        try {
+            $link = $this->dropbox->postToAPI('/sharing/create_shared_link_with_settings', ['path' => $path])->getDecodedBody();
+        } catch (DropboxClientException $e) {
+            if (!str_contains($e->getMessage(), 'shared_link_already_exists')) {
+                throw new RuntimeException('Creating a Dropbox link failed: ' . $e->getMessage(), 0, $e);
+            }
+
+            $links = $this->dropbox->postToAPI('/sharing/list_shared_links', ['path' => $path, 'direct_only' => true])->getDecodedBody();
+            $link = is_array($links['links'] ?? null) ? ($links['links'][0] ?? null) : null;
+        }
+
+        if (!is_array($link) || !is_string($link['url'] ?? null)) {
+            throw new RuntimeException('Dropbox returned no link for ' . $path);
+        }
+
+        return $link['url'];
     }
 
     protected function store(string $sourcePath, string $destinationFilename): void
