@@ -161,6 +161,7 @@ final class UploadContractTest extends TestCase
         yield 'not a number' => ['abc', 'not_integer'];
         yield 'a fraction' => ['60.5', 'not_integer'];
         yield 'negative' => ['-60', 'not_integer'];
+        yield 'trailing newline' => ["60\n", 'not_integer'];
         yield 'below 40' => ['39', 'out_of_range'];
         yield 'above 5000' => ['5001', 'out_of_range'];
     }
@@ -198,6 +199,7 @@ final class UploadContractTest extends TestCase
         yield 'with an extension' => ['thumbnail.jpg', 'invalid_characters'];
         yield 'with a space' => ['my thumbnail', 'invalid_characters'];
         yield 'over 100 characters' => [str_repeat('a', 101), 'too_long'];
+        yield 'trailing newline' => ["thumbnail\n", 'invalid_characters'];
     }
 
     #[DataProvider('rejectedOutputFilenames')]

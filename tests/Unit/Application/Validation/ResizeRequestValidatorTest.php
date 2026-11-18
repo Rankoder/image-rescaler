@@ -104,6 +104,24 @@ final class ResizeRequestValidatorTest extends TestCase
         );
     }
 
+    public function testATrailingNewlineIsNotPartOfAValidValue(): void
+    {
+        $this->assertFails(
+            [[Field::MaxWidth, ErrorCode::NotInteger], [Field::OutputFilename, ErrorCode::InvalidCharacters]],
+            $this->validator(1000, new ImageInfo('image/png', 300, 200)),
+            new ResizeInput(SourceFile::at('/tmp/upload', 'photo.png'), "60\n", '40', null, "thumbnail\n"),
+        );
+    }
+
+    public function testLeadingZerosDoNotChangeTheNumber(): void
+    {
+        $request = $this->validator(1000, new ImageInfo('image/png', 300, 200))->validate(
+            new ResizeInput(SourceFile::at('/tmp/upload', 'photo.png'), '000060', '0040'),
+        );
+
+        $this->assertSame([60, 40], [$request->width, $request->height]);
+    }
+
     public function testEveryInvalidFieldIsReportedInTheOrderOfTheFields(): void
     {
         $this->assertFails(

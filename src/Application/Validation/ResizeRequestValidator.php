@@ -114,12 +114,12 @@ final readonly class ResizeRequestValidator
         if ($value === null || $value === '') {
             return new ValidationError($field, ErrorCode::Required, sprintf('%s is required.', $field->value));
         }
-        if (preg_match('/^\d+$/', $value) !== 1) {
+        if (preg_match('/^\d+\z/', $value) !== 1) {
             return new ValidationError($field, ErrorCode::NotInteger, sprintf('%s must be a whole number.', $field->value));
         }
 
         $side = (int) $value;
-        if (strlen($value) > 5 || $side < self::MIN_FRAME_SIDE || $side > self::MAX_FRAME_SIDE) {
+        if ($side < self::MIN_FRAME_SIDE || $side > self::MAX_FRAME_SIDE) {
             return new ValidationError($field, ErrorCode::OutOfRange, sprintf(
                 '%s must be between %d and %d.',
                 $field->value,
@@ -149,7 +149,7 @@ final readonly class ResizeRequestValidator
         if ($value === null || $value === '') {
             return null;
         }
-        if (preg_match('/^[A-Za-z0-9_-]+$/', $value) !== 1) {
+        if (preg_match('/^[A-Za-z0-9_-]+\z/', $value) !== 1) {
             return new ValidationError(
                 Field::OutputFilename,
                 ErrorCode::InvalidCharacters,
