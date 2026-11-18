@@ -2,37 +2,34 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Services;
+namespace App\Infrastructure\Storage;
 
+use App\Domain\Interfaces\StorageServiceInterface;
 use App\Domain\ValueObjects\ImageValueObject;
 
-abstract class AbstractStorageService
+/**
+ * Stores under the first free name with a _v<n> suffix, so nothing is overwritten.
+ */
+abstract class AbstractStorageService implements StorageServiceInterface
 {
-    protected string $storagePath;
-
-    public function __construct()
-    {
-        $this->storagePath = $this->initializeStoragePath();
-    }
-
-    private function initializeStoragePath(): string
-    {
-        return __DIR__ . '/../../../storage/';
-    }
-
     public function upload(ImageValueObject $image): string
     {
         $filename = $this->generateVersionedFilename($image->getFilename());
         $this->store($image->getPath(), $filename);
         $this->removeTemporaryFile($image->getPath());
+
         return $filename;
     }
 
+    abstract protected function fileExists(string $filename): bool;
+
+    abstract protected function store(string $sourcePath, string $destinationFilename): void;
+
     private function generateVersionedFilename(string $filename): string
     {
-        $pathInfo = pathinfo($filename);
-        $baseName = $pathInfo['filename'];
-        $extension = isset($pathInfo['extension']) ? '.' . $pathInfo['extension'] : '';
+        $baseName = pathinfo($filename, PATHINFO_FILENAME);
+        $extension = pathinfo($filename, PATHINFO_EXTENSION);
+        $extension = $extension === '' ? '' : '.' . $extension;
         $version = 1;
 
         while ($this->fileExists($this->createVersionedFilename($baseName, $version, $extension))) {
@@ -53,8 +50,4 @@ abstract class AbstractStorageService
             unlink($filePath);
         }
     }
-
-    abstract protected function fileExists(string $filename): bool;
-
-    abstract protected function store(string $sourcePath, string $destinationFilename): void;
 }

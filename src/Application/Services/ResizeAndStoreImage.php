@@ -8,6 +8,7 @@ use App\Application\Validation\ResizeInput;
 use App\Application\Validation\ResizeRequestValidator;
 use App\Application\Validation\ValidationFailed;
 use App\Domain\Interfaces\ImageResizer;
+use App\Domain\Interfaces\StorageRegistry;
 
 /**
  * The resize use case shared by HTTP and the CLI: validate, crop, store.
@@ -18,7 +19,7 @@ final readonly class ResizeAndStoreImage
         private ResizeRequestValidator $validator,
         private OutputFilename $outputFilename,
         private ImageResizer $resizer,
-        private StorageServiceFactory $storageFactory,
+        private StorageRegistry $storages,
     ) {}
 
     /**
@@ -35,7 +36,7 @@ final readonly class ResizeAndStoreImage
             $this->outputFilename->for($request),
         );
 
-        $storage = $this->storageFactory->create($request->storage->value);
+        $storage = $this->storages->get($request->storage);
         $path = $storage->upload($image);
 
         return new StoredImage($path, $storage->getPublicUrl($path));

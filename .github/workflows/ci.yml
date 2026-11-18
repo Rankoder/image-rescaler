@@ -25,9 +25,7 @@ jobs:
 
       - run: composer install --no-interaction --no-progress
 
-      # The app loads .env on start; the example file is enough for tests
-      - run: cp .env-example .env
-
+      # Tests take their environment from phpunit.xml; no .env file is needed
       - run: composer check
 
   prod-image:

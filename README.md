@@ -54,7 +54,7 @@ It publishes the same host port as the development container, `APP_PORT` from `.
 
 ## Configuration
 
-All settings come from `.env`:
+All settings come from `.env`: Compose passes them to the container as environment variables, and the application reads them once at startup (`AppConfig`). Tests take theirs from `phpunit.xml`.
 
 | Variable | Description |
 |----------|-------------|
@@ -153,7 +153,7 @@ docker compose exec web composer cs                  # code style check (PER-CS)
 docker compose exec web composer check               # cs, phpstan and test in one go, as before a PR
 ```
 
-`docker compose exec web composer list` shows them with descriptions. Existing PHPStan errors are recorded in `phpstan-baseline.neon`; new code must pass without adding to it.
+`docker compose exec web composer list` shows them with descriptions. PHPStan runs at level max without a baseline: the code has no recorded errors left.
 
 The architecture rules are PHPStan rules from phpat, written as classes in `tests/Architecture`: which layer and which packages a layer may not depend on. Calls to I/O functions (`file_put_contents`, `getenv`) and scripts without a class (`bin/resize`, `routes.php`) are out of their reach and stay with code review.
 
@@ -178,13 +178,12 @@ Besides Docker it needs `git` and `curl` on the host. It runs next to the develo
 
 ```
 src/
-├── Domain/                enums, value objects and interfaces
-├── Application/           the resize use case, its validation, image processing, storage services
-└── Infrastructure/        HTTP controllers, the CLI command and input directory, image inspection
+├── Domain/                enums, value objects and interfaces (ports)
+├── Application/           the resize use case and its validation
+└── Infrastructure/        Container and AppConfig, HTTP controllers, CLI, storage adapters, image processing
 public/index.php           HTTP entry point → routes.php → controllers (bramus/router)
 bin/resize                 CLI entry point
 openapi.yaml               API contract
-config/                    S3 config from environment variables (dropbox.php is unused; Dropbox reads getenv directly)
 docker/entrypoint.sh       dev container start: dependencies, storage and input dirs, Apache
 docker/php.ini             PHP settings: errors to the log, not to responses
 docker/xdebug.ini          Xdebug settings, dev image only
@@ -192,7 +191,7 @@ bin/fresh-check            check of a pushed branch from a fresh clone
 docs/                      step-by-step guides, linked from this README
 http/                      PhpStorm HTTP client requests (api.http) and environments
 tests/                     Unit, Functional, Integration and Contract (PHPUnit), Architecture (phpat); Support/ holds helpers, fixtures/ the test image
-phpstan.neon.dist          PHPStan config; phpstan-baseline.neon holds existing errors
+phpstan.neon.dist          PHPStan config
 .php-cs-fixer.dist.php     PHP CS Fixer config
 ```
 

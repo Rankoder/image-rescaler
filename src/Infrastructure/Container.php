@@ -6,9 +6,10 @@ namespace App\Infrastructure;
 
 use App\Application\Services\OutputFilename;
 use App\Application\Services\ResizeAndStoreImage;
-use App\Application\Services\StorageServiceFactory;
 use App\Application\Validation\ResizeRequestValidator;
+use App\Domain\Enums\StorageType;
 use App\Domain\Interfaces\ImageResizer;
+use App\Domain\Interfaces\StorageRegistry;
 use App\Infrastructure\Cli\InputDirectory;
 use App\Infrastructure\Cli\ResizeCommand;
 use App\Infrastructure\Config\AppConfig;
@@ -17,6 +18,14 @@ use App\Infrastructure\Controllers\ImageController;
 use App\Infrastructure\Controllers\NotFoundController;
 use App\Infrastructure\Image\InterventionImageResizer;
 use App\Infrastructure\Image\LocalImageInspector;
+use App\Infrastructure\Storage\DropboxStorageService;
+use App\Infrastructure\Storage\LazyStorageRegistry;
+use App\Infrastructure\Storage\LocalStorageService;
+use App\Infrastructure\Storage\S3StorageService;
+use Aws\S3\S3Client;
+use Kunnu\Dropbox\Dropbox;
+use Kunnu\Dropbox\DropboxApp;
+use RuntimeException;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\ImageManager;
 use Nyholm\Psr7\Factory\Psr17Factory;
@@ -69,12 +78,43 @@ final readonly class Container
             new ResizeRequestValidator(new LocalImageInspector()),
             new OutputFilename(),
             $this->imageResizer(),
-            new StorageServiceFactory(),
+            $this->storageRegistry(),
         );
     }
 
     public function imageResizer(): ImageResizer
     {
         return new InterventionImageResizer(new ImageManager(new GdDriver()), $this->config->temporaryDirectory);
+    }
+
+    public function storageRegistry(): StorageRegistry
+    {
+        $config = $this->config;
+
+        return new LazyStorageRegistry([
+            StorageType::Local->value => static fn(): LocalStorageService => new LocalStorageService(
+                $config->storageDirectory,
+                $config->publicBaseUrl,
+            ),
+            StorageType::S3->value => static fn(): S3StorageService => new S3StorageService(
+                new S3Client([
+                    'credentials' => ['key' => $config->aws->accessKeyId, 'secret' => $config->aws->secretAccessKey],
+                    'region' => $config->aws->region,
+                    'version' => 'latest',
+                ]),
+                $config->aws->bucket,
+                $config->aws->region,
+            ),
+            StorageType::Dropbox->value => static fn(): DropboxStorageService => self::dropboxStorage($config),
+        ]);
+    }
+
+    private static function dropboxStorage(AppConfig $config): DropboxStorageService
+    {
+        if ($config->dropboxAccessToken === '') {
+            throw new RuntimeException('Dropbox access token is not set.');
+        }
+
+        return new DropboxStorageService(new Dropbox(new DropboxApp('', '', $config->dropboxAccessToken)));
     }
 }
