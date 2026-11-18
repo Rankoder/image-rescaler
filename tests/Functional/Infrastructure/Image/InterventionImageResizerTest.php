@@ -67,6 +67,21 @@ final class InterventionImageResizerTest extends TestCase
         $this->assertSame([0, 0, 255], $this->rgb($image, 34, 20));
     }
 
+    public function testEveryCallWritesItsOwnTemporaryFileEvenUnderTheSameName(): void
+    {
+        $source = $this->files->png(100, 100);
+        $resizer = new InterventionImageResizer(new ImageManager(new GdDriver()), $this->files->directory());
+
+        $first = $resizer->cover($source, 40, 40, 'thumb.png');
+        $second = $resizer->cover($source, 40, 40, 'thumb.png');
+
+        $this->assertNotSame($first->getPath(), $second->getPath());
+        $this->assertSame(['thumb.png', 'thumb.png'], [$first->getFilename(), $second->getFilename()]);
+        $this->assertStringEndsWith('-thumb.png', $first->getPath());
+        $this->assertFileExists($first->getPath());
+        $this->assertFileExists($second->getPath());
+    }
+
     private function resize(string $source, ImageFormat $format, int $width, int $height): string
     {
         $filename = $this->outputFilename . '.' . $format->extension();

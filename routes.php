@@ -34,6 +34,10 @@ $router->post('/upload', function () use ($container, $emit) {
     $emit($container->imageController()->upload($request));
 });
 
+$router->get('/files/([^/]+)', function (string $name) use ($container, $emit) {
+    $emit($container->fileController()->show($name));
+});
+
 $notFound = function () use ($container, $emit) {
     $emit($container->notFoundController()->respond());
 };

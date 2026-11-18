@@ -62,8 +62,9 @@ All settings come from `.env`: Compose passes them to the container as environme
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | S3 credentials |
 | `AWS_REGION` | S3 region, e.g. `eu-central-1` |
 | `AWS_BUCKET_NAME` | target bucket |
-| `DROPBOX_ACCESS_TOKEN` | Dropbox API token |
-| `INPUT_DIR` | directory the CLI reads images from, `storage/input` by default |
+| `DROPBOX_ACCESS_TOKEN` | Dropbox API token; the app needs the `files.content.write`, `files.metadata.read` and `sharing.write` scopes, the last one for the returned link |
+| `DROPBOX_DIRECTORY` | Dropbox folder the images go to, `/Aplikacje/image-rescaler` by default |
+| `INPUT_DIR` | directory inside the container the CLI reads images from, `storage/input` when empty |
 
 The limits of the API (types, size, dimensions) are fixed by the contract, not by configuration. Only the variables of the storage you use need real values.
 
@@ -107,7 +108,7 @@ curl -X POST http://localhost:8080/upload \
 Success (`200`):
 
 ```json
-{"status": "success", "path": "thumbnail_v1.jpg", "url": "http://localhost:8080/thumbnail_v1.jpg"}
+{"status": "success", "path": "thumbnail_v1.jpg", "url": "http://localhost:8080/files/thumbnail_v1.jpg"}
 ```
 
 Invalid fields return `422` with all errors at once; a request that is not `multipart/form-data` returns `400` in the same shape:
@@ -119,7 +120,19 @@ Invalid fields return `422` with all errors at once; a request that is not `mult
 ]}
 ```
 
-The codes are listed in [openapi.yaml](openapi.yaml). Processing and storage failures return `500` with `{"status": "error", "message": "..."}`.
+The codes are listed in [openapi.yaml](openapi.yaml). Processing and storage failures return `500` with `{"status": "error", "message": "The image could not be processed or stored."}`; the details go to the container log (`docker compose logs web`).
+
+`url` points to the stored file: for `local` it is served by `GET /files/{name}` below, for `s3` it is the object's URL, for `dropbox` a shared link.
+
+### `GET /files/{name}`
+
+Serves an image stored with the `local` service, under the name `POST /upload` returned:
+
+```sh
+curl -o thumbnail.jpg http://localhost:8080/files/thumbnail_v1.jpg
+```
+
+Only plain names of JPEG, PNG and WebP files directly in `storage/` are served; anything else, `storage/input/` included, is `404`.
 
 To send these requests from PhpStorm, with ready examples and checks of the responses, follow [docs/phpstorm-http-client.md](docs/phpstorm-http-client.md).
 
@@ -194,10 +207,6 @@ tests/                     Unit, Functional, Integration and Contract (PHPUnit),
 phpstan.neon.dist          PHPStan config
 .php-cs-fixer.dist.php     PHP CS Fixer config
 ```
-
-## Known limitations
-
-- The `url` returned for `local` storage is not served by the web server.
 
 ## License
 

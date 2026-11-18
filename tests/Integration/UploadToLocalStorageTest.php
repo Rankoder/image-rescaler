@@ -47,7 +47,7 @@ final class UploadToLocalStorageTest extends TestCase
         $storedName = $this->outputName . '_v1.jpg';
         $this->assertSame(200, $response->getStatusCode());
         $this->assertSame(
-            ['status' => 'success', 'path' => $storedName, 'url' => 'http://localhost:8080/' . $storedName],
+            ['status' => 'success', 'path' => $storedName, 'url' => 'http://localhost:8080/files/' . $storedName],
             $this->json($response),
         );
 

@@ -13,11 +13,13 @@ use App\Domain\Interfaces\StorageRegistry;
 use App\Infrastructure\Cli\InputDirectory;
 use App\Infrastructure\Cli\ResizeCommand;
 use App\Infrastructure\Config\AppConfig;
+use App\Infrastructure\Controllers\FileController;
 use App\Infrastructure\Controllers\HealthController;
 use App\Infrastructure\Controllers\ImageController;
 use App\Infrastructure\Controllers\NotFoundController;
 use App\Infrastructure\Image\InterventionImageResizer;
 use App\Infrastructure\Image\LocalImageInspector;
+use App\Infrastructure\Logging\ErrorLogLogger;
 use App\Infrastructure\Storage\DropboxStorageService;
 use App\Infrastructure\Storage\LazyStorageRegistry;
 use App\Infrastructure\Storage\LocalStorageService;
@@ -29,6 +31,7 @@ use RuntimeException;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\ImageManager;
 use Nyholm\Psr7\Factory\Psr17Factory;
+use Psr\Log\LoggerInterface;
 
 /**
  * The one place where the application is wired together, for HTTP, the CLI and the tests.
@@ -57,6 +60,16 @@ final readonly class Container
         return new NotFoundController($this->httpFactory, $this->httpFactory);
     }
 
+    public function fileController(): FileController
+    {
+        return new FileController(
+            $this->config->storageDirectory,
+            $this->httpFactory,
+            $this->httpFactory,
+            $this->notFoundController(),
+        );
+    }
+
     public function imageController(): ImageController
     {
         return new ImageController(
@@ -64,7 +77,13 @@ final readonly class Container
             $this->httpFactory,
             $this->httpFactory,
             $this->config->postMaxSize,
+            $this->logger(),
         );
+    }
+
+    public function logger(): LoggerInterface
+    {
+        return new ErrorLogLogger();
     }
 
     public function resizeCommand(): ResizeCommand
@@ -115,6 +134,9 @@ final readonly class Container
             throw new RuntimeException('Dropbox access token is not set.');
         }
 
-        return new DropboxStorageService(new Dropbox(new DropboxApp('', '', $config->dropboxAccessToken)));
+        return new DropboxStorageService(
+            new Dropbox(new DropboxApp('', '', $config->dropboxAccessToken)),
+            $config->dropboxDirectory,
+        );
     }
 }

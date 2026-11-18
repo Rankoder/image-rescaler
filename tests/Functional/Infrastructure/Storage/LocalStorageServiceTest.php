@@ -54,6 +54,20 @@ final class LocalStorageServiceTest extends TestCase
         rmdir($directory);
     }
 
+    public function testRemovesTheTemporaryFileAlsoWhenStoringFails(): void
+    {
+        $temporary = $this->files->withContent('image', 'thumb.jpg');
+        $blocked = $this->files->withContent('a file where the directory should be', 'blocked');
+        $service = new LocalStorageService($blocked . '/storage', 'http://images.test');
+
+        try {
+            @$service->upload(new ImageValueObject($temporary, 'thumb.jpg'));
+            $this->fail('Storing did not fail.');
+        } catch (RuntimeException) {
+            $this->assertFileDoesNotExist($temporary);
+        }
+    }
+
     public function testAMissingSourceFails(): void
     {
         $this->expectException(RuntimeException::class);
@@ -64,6 +78,6 @@ final class LocalStorageServiceTest extends TestCase
 
     public function testThePublicUrlStartsWithTheConfiguredBase(): void
     {
-        $this->assertSame('http://images.test:8081/thumb_v1.jpg', $this->service->getPublicUrl('thumb_v1.jpg'));
+        $this->assertSame('http://images.test:8081/files/thumb_v1.jpg', $this->service->getPublicUrl('thumb_v1.jpg'));
     }
 }

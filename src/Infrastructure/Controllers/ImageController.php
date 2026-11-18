@@ -11,13 +11,14 @@ use App\Application\Validation\ResizeInput;
 use App\Application\Validation\SourceFile;
 use App\Application\Validation\ValidationError;
 use App\Application\Validation\ValidationFailed;
-use Exception;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Message\UploadedFileInterface;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
+use Throwable;
 
 final readonly class ImageController
 {
@@ -26,6 +27,7 @@ final readonly class ImageController
         private ResponseFactoryInterface $responseFactory,
         private StreamFactoryInterface $streamFactory,
         private int $postMaxSize,
+        private LoggerInterface $logger,
     ) {}
 
     public function upload(ServerRequestInterface $request): ResponseInterface
@@ -51,8 +53,11 @@ final readonly class ImageController
             return $this->json(200, ['status' => 'success', 'path' => $stored->path, 'url' => $stored->url]);
         } catch (ValidationFailed $failure) {
             return $this->validationFailed($failure->errors);
-        } catch (Exception $exception) {
-            return $this->json(500, ['status' => 'error', 'message' => $exception->getMessage()]);
+        } catch (Throwable $failure) {
+            // The details name buckets, paths and libraries, so they go to the log, not to the client
+            $this->logger->error('Upload failed', ['exception' => $failure]);
+
+            return $this->json(500, ['status' => 'error', 'message' => 'The image could not be processed or stored.']);
         }
     }
 

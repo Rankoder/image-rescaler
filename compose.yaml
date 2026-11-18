@@ -17,5 +17,8 @@ services:
       - AWS_REGION=${AWS_REGION}
       - AWS_BUCKET_NAME=${AWS_BUCKET_NAME}
       - DROPBOX_ACCESS_TOKEN=${DROPBOX_ACCESS_TOKEN}
+      - DROPBOX_DIRECTORY=${DROPBOX_DIRECTORY:-}
+      # The CLI's input directory inside the container; empty means storage/input
+      - INPUT_DIR=${INPUT_DIR:-}
       # LocalStorageService builds the returned url from it
       - APP_PORT=${APP_PORT:-8080}

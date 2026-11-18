@@ -15,7 +15,7 @@ final class LocalStorageService extends AbstractStorageService
 
     public function getPublicUrl(string $filePath): string
     {
-        return $this->publicBaseUrl . '/' . $filePath;
+        return $this->publicBaseUrl . '/files/' . $filePath;
     }
 
     protected function store(string $sourcePath, string $destinationFilename): void

@@ -21,6 +21,7 @@ final class AppConfigTest extends TestCase
             'AWS_REGION' => 'eu-central-1',
             'AWS_BUCKET_NAME' => 'bucket',
             'DROPBOX_ACCESS_TOKEN' => 'token',
+            'DROPBOX_DIRECTORY' => '/Apps/thumbnails/',
         ], '/app');
 
         $this->assertSame('http://images.test:8081', $config->publicBaseUrl);
@@ -28,6 +29,7 @@ final class AppConfigTest extends TestCase
         $this->assertSame('/data/input', $config->inputDirectory);
         $this->assertEquals(new AwsConfig('key', 'secret', 'eu-central-1', 'bucket'), $config->aws);
         $this->assertSame('token', $config->dropboxAccessToken);
+        $this->assertSame('/Apps/thumbnails', $config->dropboxDirectory);
     }
 
     public function testFallsBackToDefaultsForMissingOrEmptyValues(): void
@@ -37,5 +39,6 @@ final class AppConfigTest extends TestCase
         $this->assertSame('http://localhost:8080', $config->publicBaseUrl);
         $this->assertSame('/app/storage/input', $config->inputDirectory);
         $this->assertSame('', $config->dropboxAccessToken);
+        $this->assertSame('/Aplikacje/image-rescaler', $config->dropboxDirectory);
     }
 }

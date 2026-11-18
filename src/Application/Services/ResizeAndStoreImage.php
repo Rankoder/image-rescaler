@@ -28,6 +28,8 @@ final readonly class ResizeAndStoreImage
     public function handle(ResizeInput $input): StoredImage
     {
         $request = $this->validator->validate($input);
+        // Chosen before resizing, so a storage that cannot be built leaves no temporary file behind
+        $storage = $this->storages->get($request->storage);
 
         $image = $this->resizer->cover(
             $request->sourcePath,
@@ -35,8 +37,6 @@ final readonly class ResizeAndStoreImage
             $request->height,
             $this->outputFilename->for($request),
         );
-
-        $storage = $this->storages->get($request->storage);
         $path = $storage->upload($image);
 
         return new StoredImage($path, $storage->getPublicUrl($path));
