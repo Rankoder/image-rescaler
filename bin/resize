@@ -3,30 +3,11 @@
 
 declare(strict_types=1);
 
-use App\Application\Services\OutputFilename;
-use App\Application\Services\ResizeAndStoreImage;
-use App\Application\Services\StorageServiceFactory;
-use App\Application\Validation\ResizeRequestValidator;
-use App\Infrastructure\Cli\InputDirectory;
-use App\Infrastructure\Cli\ResizeCommand;
-use App\Infrastructure\Image\InterventionImageResizer;
-use App\Infrastructure\Image\LocalImageInspector;
-use Intervention\Image\Drivers\Gd\Driver as GdDriver;
-use Intervention\Image\ImageManager;
-use Dotenv\Dotenv;
+use App\Infrastructure\Config\AppConfig;
+use App\Infrastructure\Container;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-Dotenv::createImmutable(__DIR__ . '/..')->load();
+$container = new Container(AppConfig::fromEnvironment(getenv(), dirname(__DIR__)));
 
-$command = new ResizeCommand(
-    new ResizeAndStoreImage(
-        new ResizeRequestValidator(new LocalImageInspector()),
-        new OutputFilename(),
-        new InterventionImageResizer(new ImageManager(new GdDriver()), sys_get_temp_dir()),
-        new StorageServiceFactory(),
-    ),
-    new InputDirectory(getenv('INPUT_DIR') ?: __DIR__ . '/../storage/input'),
-);
-
-exit($command->run(getopt('f:w:h:s:o:') ?: [], STDOUT, STDERR));
+exit($container->resizeCommand()->run(getopt('f:w:h:s:o:') ?: [], STDOUT, STDERR));
