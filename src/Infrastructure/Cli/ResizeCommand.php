@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Infrastructure\Cli;
 
 use App\Application\Services\ResizeAndStoreImage;
-use App\Application\Validation\ErrorCode;
 use App\Application\Validation\Field;
 use App\Application\Validation\ResizeInput;
 use App\Application\Validation\SourceFile;
@@ -14,7 +13,7 @@ use Exception;
 
 final readonly class ResizeCommand
 {
-    public const string USAGE = 'Usage: bin/resize -f <file> -w <max_width> -h <max_height> [-s <service>] [-o <output_filename>]';
+    public const string USAGE = 'Usage: bin/resize -f <file in the input directory> -w <max_width> -h <max_height> [-s <service>] [-o <output_filename>]';
 
     private const array OPTIONS = [
         Field::File->value => 'f',
@@ -24,7 +23,10 @@ final readonly class ResizeCommand
         Field::OutputFilename->value => 'o',
     ];
 
-    public function __construct(private ResizeAndStoreImage $resizeAndStoreImage) {}
+    public function __construct(
+        private ResizeAndStoreImage $resizeAndStoreImage,
+        private InputDirectory $inputDirectory,
+    ) {}
 
     /**
      * @param array<string, mixed> $options as returned by getopt('f:w:h:s:o:')
@@ -61,12 +63,8 @@ final readonly class ResizeCommand
         return 0;
     }
 
-    private function sourceFile(?string $path): ?SourceFile
+    private function sourceFile(?string $name): ?SourceFile
     {
-        if ($path === null || $path === '') {
-            return null;
-        }
-
-        return is_file($path) ? SourceFile::at($path, basename($path)) : SourceFile::rejected(ErrorCode::NotFound, basename($path));
+        return $name === null || $name === '' ? null : $this->inputDirectory->sourceFile($name);
     }
 }

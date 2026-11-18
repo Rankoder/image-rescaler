@@ -65,6 +65,7 @@ All settings come from `.env`:
 | `DROPBOX_ACCESS_TOKEN` | Dropbox API token |
 | `ALLOWED_IMAGE_TYPES` | MIME types the storage step still checks by extension, `image/jpeg,image/jpg,image/png,image/webp` |
 | `MAX_FILE_SIZE` | size limit of the storage step in bytes, `5242880` |
+| `INPUT_DIR` | directory the CLI reads images from, `storage/input` by default |
 
 The limits of the API itself (types, size, dimensions) are fixed by the contract, not by these variables. Only the variables of the storage you use need real values.
 
@@ -115,17 +116,22 @@ To send these requests from PhpStorm, with ready examples and checks of the resp
 
 ## CLI
 
+The CLI reads images only from the input directory, `storage/input/` (`INPUT_DIR` overrides it), and goes through the same validation and processing as the API:
+
 ```sh
-docker compose exec web php src/Application/CLI/resize.php \
-  -f <file_path> -w <max_width> -h <max_height> [-s <service>] [-o <output_filename>]
+cp photo.jpg storage/input/
+docker compose exec web bin/resize -f photo.jpg -w 200 -h 150 -o thumbnail
+# Stored thumbnail_v1.jpg
 ```
 
 | Option | Description |
 |--------|-------------|
-| `-f` | path to the image inside the container, e.g. `/var/www/html/storage/photo.jpg` |
-| `-w`, `-h` | maximum width and height in px, scaled as in the API |
+| `-f` | file name in the input directory; a name leading outside it (`../`, an absolute path, a symlink) is rejected |
+| `-w`, `-h` | width and height of the frame in px, as `max_width` and `max_height` in the API |
 | `-s` | `local` (default), `s3` or `dropbox` |
-| `-o` | name of the stored file |
+| `-o` | name of the stored file, as `output_filename` in the API |
+
+Invalid options are all reported on stderr, one line per option, and the exit code is `1`.
 
 ## Development
 
@@ -140,7 +146,7 @@ docker compose exec web composer check               # cs, phpstan and test in o
 
 `docker compose exec web composer list` shows them with descriptions. Existing PHPStan errors are recorded in `phpstan-baseline.neon`; new code must pass without adding to it.
 
-The architecture rules are PHPStan rules from phpat, written as classes in `tests/Architecture`: which layer and which packages a layer may not depend on. Calls to I/O functions (`file_put_contents`, `getenv`) and scripts without a class (`resize.php`) are out of their reach and stay with code review.
+The architecture rules are PHPStan rules from phpat, written as classes in `tests/Architecture`: which layer and which packages a layer may not depend on. Calls to I/O functions (`file_put_contents`, `getenv`) and scripts without a class (`bin/resize`, `routes.php`) are out of their reach and stay with code review.
 
 Unit tests cover single classes, functional tests a service with its external client mocked, integration tests the whole upload through the controller into `storage/`, without mocks. S3 and Dropbox have no integration tests, since they need real accounts.
 
@@ -163,19 +169,20 @@ Besides Docker it needs `git` and `curl` on the host. It runs next to the develo
 
 ```
 src/
-├── Domain/                interfaces and value objects
-├── Application/           image processing, validation, storage services
-│   └── CLI/resize.php     CLI entry point
-└── Infrastructure/        HTTP controllers
+├── Domain/                enums, value objects and interfaces
+├── Application/           the resize use case, its validation, image processing, storage services
+└── Infrastructure/        HTTP controllers, the CLI command and input directory, image inspection
 public/index.php           HTTP entry point → routes.php → controllers (bramus/router)
+bin/resize                 CLI entry point
+openapi.yaml               API contract
 config/                    S3 config from environment variables (dropbox.php is unused; Dropbox reads getenv directly)
-docker/entrypoint.sh       dev container start: dependencies, storage dir, Apache
+docker/entrypoint.sh       dev container start: dependencies, storage and input dirs, Apache
 docker/php.ini             PHP settings: errors to the log, not to responses
 docker/xdebug.ini          Xdebug settings, dev image only
 bin/fresh-check            check of a pushed branch from a fresh clone
 docs/                      step-by-step guides, linked from this README
 http/                      PhpStorm HTTP client requests (api.http) and environments
-tests/                     Unit, Functional and Integration (PHPUnit), Architecture (phpat); fixtures/ holds the test image
+tests/                     Unit, Functional, Integration and Contract (PHPUnit), Architecture (phpat); Support/ holds helpers, fixtures/ the test image
 phpstan.neon.dist          PHPStan config; phpstan-baseline.neon holds existing errors
 .php-cs-fixer.dist.php     PHP CS Fixer config
 ```
@@ -183,7 +190,6 @@ phpstan.neon.dist          PHPStan config; phpstan-baseline.neon holds existing 
 ## Known limitations
 
 - The `url` returned for `local` storage is not served by the web server.
-- The CLI does not validate the input file the way the API does.
 
 ## License
 

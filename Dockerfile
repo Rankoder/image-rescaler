@@ -87,7 +87,7 @@ COPY src ./src
 COPY routes.php ./
 COPY bin/resize ./bin/
 
-RUN install -d -o www-data -g www-data storage
+RUN install -d -o www-data -g www-data storage storage/input
 
 USER www-data
 

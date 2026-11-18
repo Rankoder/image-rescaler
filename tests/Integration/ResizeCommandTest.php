@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration;
 
+use App\Infrastructure\Cli\InputDirectory;
 use App\Infrastructure\Cli\ResizeCommand;
 use PHPUnit\Framework\TestCase;
 use Tests\Support\TestFiles;
@@ -32,9 +33,9 @@ final class ResizeCommandTest extends TestCase
 
     public function testStoresTheImageCroppedToTheFrame(): void
     {
-        $source = $this->files->png(150, 150, 'photo.png');
+        $this->files->png(150, 150, 'photo.png');
 
-        [$exitCode, $output, $errors] = $this->runCommand(['f' => $source, 'w' => '60', 'h' => '40', 'o' => $this->outputName]);
+        [$exitCode, $output, $errors] = $this->runCommand(['f' => 'photo.png', 'w' => '60', 'h' => '40', 'o' => $this->outputName]);
 
         $this->assertSame([0, "Stored {$this->outputName}_v1.png\n", ''], [$exitCode, $output, $errors]);
         $size = getimagesize(self::STORAGE_DIR . $this->outputName . '_v1.png');
@@ -44,9 +45,9 @@ final class ResizeCommandTest extends TestCase
 
     public function testGoesThroughTheSameValidationAsTheApiAndReportsEveryError(): void
     {
-        $source = $this->files->withContent('<?php echo 1;', 'photo.jpg');
+        $this->files->withContent('<?php echo 1;', 'photo.jpg');
 
-        [$exitCode, $output, $errors] = $this->runCommand(['f' => $source, 'w' => '39', 's' => 'ftp', 'o' => $this->outputName]);
+        [$exitCode, $output, $errors] = $this->runCommand(['f' => 'photo.jpg', 'w' => '39', 's' => 'ftp', 'o' => $this->outputName]);
 
         $this->assertSame(1, $exitCode);
         $this->assertSame('', $output);
@@ -61,6 +62,14 @@ final class ResizeCommandTest extends TestCase
         $this->assertSame([], glob(self::STORAGE_DIR . $this->outputName . '*'));
     }
 
+    public function testReadsOnlyFromTheInputDirectory(): void
+    {
+        [$exitCode, , $errors] = $this->runCommand(['f' => '../../etc/passwd', 'w' => '60', 'h' => '40']);
+
+        $this->assertSame(1, $exitCode);
+        $this->assertStringStartsWith("-f: The file must be inside the input directory.\n", $errors);
+    }
+
     /**
      * @param array<string, string> $options
      * @return array{int, string, string}
@@ -72,7 +81,7 @@ final class ResizeCommandTest extends TestCase
         $this->assertNotFalse($output);
         $this->assertNotFalse($errors);
 
-        $exitCode = (new ResizeCommand(Wiring::resizeAndStoreImage()))->run($options, $output, $errors);
+        $exitCode = (new ResizeCommand(Wiring::resizeAndStoreImage(), new InputDirectory($this->files->directory())))->run($options, $output, $errors);
 
         rewind($output);
         rewind($errors);

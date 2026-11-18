@@ -7,6 +7,7 @@ use App\Application\Services\ImageProcessingService;
 use App\Application\Services\ResizeAndStoreImage;
 use App\Application\Services\StorageServiceFactory;
 use App\Application\Validation\ResizeRequestValidator;
+use App\Infrastructure\Cli\InputDirectory;
 use App\Infrastructure\Cli\ResizeCommand;
 use App\Infrastructure\Image\LocalImageInspector;
 use Dotenv\Dotenv;
@@ -21,6 +22,7 @@ $command = new ResizeCommand(
         new ImageProcessingService(),
         new StorageServiceFactory(),
     ),
+    new InputDirectory(getenv('INPUT_DIR') ?: __DIR__ . '/../storage/input'),
 );
 
 exit($command->run(getopt('f:w:h:s:o:') ?: [], STDOUT, STDERR));
