@@ -208,9 +208,6 @@ phpstan.neon.dist          PHPStan config
 .php-cs-fixer.dist.php     PHP CS Fixer config
 ```
 
-## Known limitations
-
-
 ## License
 
 MIT, see [LICENSE](LICENSE).
