@@ -50,7 +50,7 @@ docker compose -f compose.prod.yaml up --build -d
 docker compose -f compose.prod.yaml ps      # STATUS shows (healthy)
 ```
 
-It publishes the same port 8080, so stop the development container first (`docker compose stop`). Settings come from the same `.env`; files stored with the `local` service live in the `storage` volume.
+It publishes the same host port as the development container, `APP_PORT` from `.env`, so stop that one first (`docker compose stop`). Settings come from the same `.env`; files stored with the `local` service live in the `storage` volume.
 
 ## Configuration
 
