@@ -11,5 +11,6 @@ return (new PhpCsFixer\Config())
     ->setRules([
         '@PER-CS' => true,
         'declare_strict_types' => true,
+        'final_class' => true,
     ])
     ->setFinder($finder);
