@@ -142,6 +142,17 @@ final class UploadContractTest extends TestCase
         $this->assertErrors(422, [['file', 'too_large']], $response);
     }
 
+    public function testARequestOverThePhpPostLimitIsTooLargeRatherThanMissingEverything(): void
+    {
+        // PHP hands such a request over with no fields and no files
+        $request = new ServerRequest('POST', '/upload', [
+            'Content-Type' => self::MULTIPART,
+            'Content-Length' => (string) (ini_parse_quantity((string) ini_get('post_max_size')) + 1),
+        ]);
+
+        $this->assertErrors(422, [['file', 'too_large']], $this->send($request));
+    }
+
     /**
      * @return iterable<string, array{string, string}>
      */

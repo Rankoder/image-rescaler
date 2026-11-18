@@ -6,6 +6,7 @@ namespace App\Infrastructure\Controllers;
 
 use App\Application\Services\ResizeAndStoreImage;
 use App\Application\Validation\ErrorCode;
+use App\Application\Validation\Field;
 use App\Application\Validation\ResizeInput;
 use App\Application\Validation\SourceFile;
 use App\Application\Validation\ValidationError;
@@ -32,6 +33,12 @@ final readonly class ImageController
             return $this->malformedRequest('The request must be multipart/form-data.');
         }
 
+        if ($this->bodyWasDropped($request)) {
+            return $this->validationFailed([
+                new ValidationError(Field::File, ErrorCode::TooLarge, 'The request is larger than the server accepts.'),
+            ]);
+        }
+
         $file = $request->getUploadedFiles()['file'] ?? null;
         if ($file instanceof UploadedFileInterface && $file->getError() === UPLOAD_ERR_PARTIAL) {
             return $this->malformedRequest('The file was only partly uploaded.');
@@ -42,17 +49,7 @@ final readonly class ImageController
 
             return $this->json(200, ['status' => 'success', 'path' => $stored->path, 'url' => $stored->url]);
         } catch (ValidationFailed $failure) {
-            return $this->json(422, [
-                'status' => 'error',
-                'errors' => array_map(
-                    static fn(ValidationError $error): array => [
-                        'field' => $error->field->value,
-                        'code' => $error->code->value,
-                        'message' => $error->message,
-                    ],
-                    $failure->errors,
-                ),
-            ]);
+            return $this->validationFailed($failure->errors);
         } catch (Exception $exception) {
             return $this->json(500, ['status' => 'error', 'message' => $exception->getMessage()]);
         }
@@ -92,6 +89,32 @@ final readonly class ImageController
         }
 
         return $path;
+    }
+
+    // PHP drops the whole body of a request over post_max_size and only logs a warning
+    private function bodyWasDropped(ServerRequestInterface $request): bool
+    {
+        $limit = ini_parse_quantity((string) ini_get('post_max_size'));
+
+        return $limit > 0 && (int) $request->getHeaderLine('Content-Length') > $limit;
+    }
+
+    /**
+     * @param list<ValidationError> $errors
+     */
+    private function validationFailed(array $errors): ResponseInterface
+    {
+        return $this->json(422, [
+            'status' => 'error',
+            'errors' => array_map(
+                static fn(ValidationError $error): array => [
+                    'field' => $error->field->value,
+                    'code' => $error->code->value,
+                    'message' => $error->message,
+                ],
+                $errors,
+            ),
+        ]);
     }
 
     private function malformedRequest(string $message): ResponseInterface
