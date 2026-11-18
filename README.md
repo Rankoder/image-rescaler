@@ -108,7 +108,7 @@ curl -X POST http://localhost:8080/upload \
 Success (`200`):
 
 ```json
-{"status": "success", "path": "thumbnail_v1.jpg", "url": "http://localhost:8080/thumbnail_v1.jpg"}
+{"status": "success", "path": "thumbnail_v1.jpg", "url": "http://localhost:8080/files/thumbnail_v1.jpg"}
 ```
 
 Invalid fields return `422` with all errors at once; a request that is not `multipart/form-data` returns `400` in the same shape:
@@ -121,6 +121,18 @@ Invalid fields return `422` with all errors at once; a request that is not `mult
 ```
 
 The codes are listed in [openapi.yaml](openapi.yaml). Processing and storage failures return `500` with `{"status": "error", "message": "The image could not be processed or stored."}`; the details go to the container log (`docker compose logs web`).
+
+`url` points to the stored file: for `local` it is served by `GET /files/{name}` below, for `s3` it is the object's URL, for `dropbox` a shared link.
+
+### `GET /files/{name}`
+
+Serves an image stored with the `local` service, under the name `POST /upload` returned:
+
+```sh
+curl -o thumbnail.jpg http://localhost:8080/files/thumbnail_v1.jpg
+```
+
+Only plain names of JPEG, PNG and WebP files directly in `storage/` are served; anything else, `storage/input/` included, is `404`.
 
 To send these requests from PhpStorm, with ready examples and checks of the responses, follow [docs/phpstorm-http-client.md](docs/phpstorm-http-client.md).
 
