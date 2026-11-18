@@ -3,6 +3,7 @@
 use Bramus\Router\Router;
 use App\Infrastructure\Controllers\HealthController;
 use App\Infrastructure\Controllers\ImageController;
+use App\Infrastructure\Controllers\NotFoundController;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Psr\Http\Message\ResponseInterface;
 
@@ -41,6 +42,17 @@ $router->post('/upload', function () use ($emit) {
 
     $emit($controller->upload($request));
 });
+
+$notFound = function () use ($emit) {
+    $psr17Factory = new Psr17Factory();
+
+    $emit((new NotFoundController($psr17Factory, $psr17Factory))->respond());
+};
+
+// Registered last, so it only catches what no route above matched. It also gives every common
+// method at least one route: bramus/router reads an undefined array key for a method without any.
+$router->all('/.*', $notFound);
+$router->set404($notFound);
 
 // Run the router
 $router->run();

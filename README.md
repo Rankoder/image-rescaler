@@ -71,6 +71,8 @@ Only the variables of the storage you use need real values.
 
 ## API
 
+Any other path or method returns `404` with `{"status": "error", "message": "Not found"}`.
+
 ### `GET /health`
 
 Tells whether the application is up; meant for container health checks and monitoring. Returns `200`:
@@ -86,8 +88,8 @@ Tells whether the application is up; meant for container health checks and monit
 | Field | Required | Description |
 |-------|----------|-------------|
 | `file` | yes | image to scale |
-| `max_width` | yes | target width in px |
-| `max_height` | yes | target height in px |
+| `max_width` | yes | maximum width in px; the image is scaled down to fit `max_width` × `max_height`, keeping its aspect ratio, and never enlarged |
+| `max_height` | yes | maximum height in px |
 | `service` | no | `local` (default), `s3` or `dropbox` |
 | `output_filename` | no | name of the stored file; a `_v<n>` suffix is added to keep names unique |
 
@@ -108,6 +110,8 @@ Success (`200`):
 
 Errors return `{"status": "error", "message": "..."}` with `400` for missing or invalid fields and `500` for everything else.
 
+To send these requests from PhpStorm, with ready examples and checks of the responses, follow [docs/phpstorm-http-client.md](docs/phpstorm-http-client.md).
+
 ## CLI
 
 ```sh
@@ -118,7 +122,7 @@ docker compose exec web php src/Application/CLI/resize.php \
 | Option | Description |
 |--------|-------------|
 | `-f` | path to the image inside the container, e.g. `/var/www/html/storage/photo.jpg` |
-| `-w`, `-h` | target width and height in px |
+| `-w`, `-h` | maximum width and height in px, scaled as in the API |
 | `-s` | `local` (default), `s3` or `dropbox` |
 | `-o` | name of the stored file |
 
@@ -155,6 +159,7 @@ docker/entrypoint.sh       dev container start: dependencies, storage dir, Apach
 docker/php.ini             PHP settings: errors to the log, not to responses
 docker/xdebug.ini          Xdebug settings, dev image only
 docs/                      step-by-step guides, linked from this README
+http/                      PhpStorm HTTP client requests (api.http) and environments
 tests/                     Unit, Functional and Integration (PHPUnit); fixtures/ holds the test image
 phpstan.neon.dist          PHPStan config; phpstan-baseline.neon holds existing errors
 .php-cs-fixer.dist.php     PHP CS Fixer config
@@ -162,9 +167,7 @@ phpstan.neon.dist          PHPStan config; phpstan-baseline.neon holds existing 
 
 ## Known limitations
 
-- The image is resized to exactly `max_width` × `max_height`; the aspect ratio is not preserved.
 - The `url` returned for `local` storage is not served by the web server.
-- With `local` storage the `_v<n>` suffix never goes above `_v1`: a second upload under the same name overwrites the first file.
 - The CLI does not validate the input file the way the API does.
 
 ## License
