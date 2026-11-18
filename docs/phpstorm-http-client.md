@@ -26,9 +26,10 @@ Before you start: the container must be running (`docker compose up -d`).
 | Request | Expected |
 |---------|----------|
 | Health check | `200`, `{"status":"ok"}` |
-| Upload the test image | `200`, the image from `tests/fixtures/` stored as `http_client_test_v<n>.jpg` in `storage/` |
-| Upload a file type that is not allowed | an error naming the type (`txt`); the status is not checked, since it is still `500` |
-| Upload without the required fields | `400` with an error |
+| Upload the test image | `200`, the image from `tests/fixtures/` cropped to 100 × 100 and stored as `http_client_test_v<n>.jpg` in `storage/` |
+| Upload a file type that is not allowed | `422`, error `unsupported_type` for `file` |
+| Upload without the required fields | `422`, error `required` for `file`, `max_width` and `max_height` at once |
+| Upload without multipart | `400`, error `malformed_request` |
 | Unknown route | `404` with `{"status":"error","message":"Not found"}` |
 
 Each run of the upload request adds another file to `storage/`; remove them with `rm storage/http_client_test_v*.jpg`.
