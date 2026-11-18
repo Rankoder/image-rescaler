@@ -40,8 +40,7 @@
         "intervention/image": "^4",
         "kunalvarma05/dropbox-php-sdk": "^0.4.2",
         "nyholm/psr7": "^1.8",
-        "nyholm/psr7-server": "^1.0",
-        "vlucas/phpdotenv": "^5.6"
+        "nyholm/psr7-server": "^1.0"
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.95",

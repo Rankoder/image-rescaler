@@ -81,7 +81,6 @@ RUN composer dump-autoload --no-dev --optimize
 FROM base AS prod
 
 COPY --from=vendor /var/www/html/vendor ./vendor
-COPY config ./config
 COPY public ./public
 COPY src ./src
 COPY routes.php ./

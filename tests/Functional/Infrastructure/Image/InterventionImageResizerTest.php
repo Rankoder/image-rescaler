@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Tests\Functional\Application\Services;
+namespace Tests\Functional\Infrastructure\Image;
 
-use App\Application\Services\ImageProcessingService;
-use App\Application\Validation\ResizeRequest;
 use App\Domain\Enums\ImageFormat;
-use App\Domain\Enums\StorageType;
+use App\Infrastructure\Image\InterventionImageResizer;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
+use Intervention\Image\ImageManager;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Tests\Support\TestFiles;
 
-final class ImageProcessingServiceResizeImageTest extends TestCase
+final class InterventionImageResizerTest extends TestCase
 {
     private TestFiles $files;
     private string $outputFilename;
@@ -70,9 +70,9 @@ final class ImageProcessingServiceResizeImageTest extends TestCase
     private function resize(string $source, ImageFormat $format, int $width, int $height): string
     {
         $filename = $this->outputFilename . '.' . $format->extension();
-        $request = new ResizeRequest($source, 'source', $format, $width, $height, StorageType::Local, null);
+        $resizer = new InterventionImageResizer(new ImageManager(new GdDriver()), sys_get_temp_dir());
 
-        $result = (new ImageProcessingService())->resizeImage($request, $filename);
+        $result = $resizer->cover($source, $width, $height, $filename);
 
         $this->assertSame($filename, $result->getFilename());
 

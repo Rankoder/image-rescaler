@@ -21,7 +21,6 @@ final class LayerDependencyTest
                 Selector::inNamespace('App\Infrastructure'),
                 Selector::inNamespace('Aws'),
                 Selector::inNamespace('Bramus'),
-                Selector::inNamespace('Dotenv'),
                 Selector::inNamespace('GuzzleHttp'),
                 Selector::inNamespace('Intervention'),
                 Selector::inNamespace('Kunnu'),
@@ -49,7 +48,6 @@ final class LayerDependencyTest
             ->classes(
                 Selector::inNamespace('Aws'),
                 Selector::inNamespace('Bramus'),
-                Selector::inNamespace('Dotenv'),
                 Selector::inNamespace('GuzzleHttp'),
                 Selector::inNamespace('Kunnu'),
                 Selector::inNamespace('Nyholm'),

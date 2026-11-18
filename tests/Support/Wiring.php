@@ -4,41 +4,51 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
-use App\Application\Services\ImageProcessingService;
+use App\Application\Services\OutputFilename;
 use App\Application\Services\ResizeAndStoreImage;
-use App\Application\Services\StorageServiceFactory;
 use App\Application\Validation\ResizeRequestValidator;
+use App\Domain\Interfaces\ImageResizer;
+use App\Domain\Interfaces\StorageRegistry;
+use App\Infrastructure\Config\AppConfig;
+use App\Infrastructure\Container;
 use App\Infrastructure\Controllers\ImageController;
 use App\Infrastructure\Image\LocalImageInspector;
-use Nyholm\Psr7\Factory\Psr17Factory;
 
 /**
- * The same wiring as routes.php, for tests that go through the real services.
+ * The application's own Container, configured from phpunit.xml, with a way to swap the outside world for mocks.
  */
 final class Wiring
 {
-    public const int POST_MAX_SIZE = 16 * 1024 * 1024;
+    public static function config(): AppConfig
+    {
+        return AppConfig::fromEnvironment(getenv(), dirname(__DIR__, 2));
+    }
+
+    public static function container(): Container
+    {
+        return new Container(self::config());
+    }
 
     public static function resizeAndStoreImage(
-        ?ImageProcessingService $imageProcessing = null,
-        ?StorageServiceFactory $storageFactory = null,
+        ?ImageResizer $resizer = null,
+        ?StorageRegistry $storages = null,
     ): ResizeAndStoreImage {
         return new ResizeAndStoreImage(
             new ResizeRequestValidator(new LocalImageInspector()),
-            $imageProcessing ?? new ImageProcessingService(),
-            $storageFactory ?? new StorageServiceFactory(),
+            new OutputFilename(),
+            $resizer ?? self::container()->imageResizer(),
+            $storages ?? self::container()->storageRegistry(),
         );
     }
 
     public static function imageController(?ResizeAndStoreImage $resizeAndStoreImage = null): ImageController
     {
-        $factory = new Psr17Factory();
+        if ($resizeAndStoreImage === null) {
+            return self::container()->imageController();
+        }
 
-        return new ImageController(
-            $resizeAndStoreImage ?? self::resizeAndStoreImage(),
-            $factory,
-            $factory,
-            self::POST_MAX_SIZE,
-        );
+        $factory = self::container()->httpFactory();
+
+        return new ImageController($resizeAndStoreImage, $factory, $factory, self::config()->postMaxSize);
     }
 }

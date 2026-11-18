@@ -11,7 +11,7 @@ services:
     env_file: .env
     volumes:
       - storage:/var/www/html/storage
-      # ImageController loads the .env file on every request and fails without it
+      # The app reads its settings from the environment (env_file above), not from this file
       - ./.env:/var/www/html/.env:ro
     restart: unless-stopped
 

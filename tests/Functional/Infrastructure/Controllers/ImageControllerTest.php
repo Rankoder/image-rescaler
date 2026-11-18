@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Functional\Infrastructure\Controllers;
 
-use App\Application\Services\ImageProcessingService;
-use App\Application\Services\StorageServiceFactory;
+use App\Domain\Enums\StorageType;
+use App\Domain\Interfaces\ImageResizer;
+use App\Domain\Interfaces\StorageRegistry;
 use App\Domain\Interfaces\StorageServiceInterface;
 use App\Domain\ValueObjects\ImageValueObject;
 use Mockery;
@@ -28,18 +29,17 @@ final class ImageControllerTest extends TestCase
 
     private const FIXTURE = __DIR__ . '/../../../fixtures/test_image.jpg';
 
-    private ImageProcessingService&MockInterface $imageProcessing;
-    private StorageServiceFactory&MockInterface $storageFactory;
+    private ImageResizer&MockInterface $resizer;
+    private StorageRegistry&MockInterface $storages;
     private StorageServiceInterface&MockInterface $storage;
 
     protected function setUp(): void
     {
-        $this->imageProcessing = Mockery::mock(ImageProcessingService::class);
-        $this->storageFactory = Mockery::mock(StorageServiceFactory::class);
+        $this->resizer = Mockery::mock(ImageResizer::class);
+        $this->storages = Mockery::mock(StorageRegistry::class);
         $this->storage = Mockery::mock(StorageServiceInterface::class);
 
-        $this->imageProcessing->shouldReceive('outputFilename')->andReturn('thumbnail.jpg');
-        $this->imageProcessing->shouldReceive('resizeImage')->andReturn(new ImageValueObject('/tmp/thumbnail.jpg', 'thumbnail.jpg'));
+        $this->resizer->shouldReceive('cover')->andReturn(new ImageValueObject('/tmp/thumbnail.jpg', 'thumbnail.jpg'));
     }
 
     /**
@@ -55,7 +55,7 @@ final class ImageControllerTest extends TestCase
     #[DataProvider('services')]
     public function testStoresInTheChosenServiceAndAnswersWithItsPathAndUrl(string $service): void
     {
-        $this->storageFactory->shouldReceive('create')->once()->with($service)->andReturn($this->storage);
+        $this->storages->shouldReceive('get')->once()->with(StorageType::from($service))->andReturn($this->storage);
         $this->storage->shouldReceive('upload')->once()->andReturn('thumbnail_v1.jpg');
         $this->storage->shouldReceive('getPublicUrl')->with('thumbnail_v1.jpg')->andReturn('https://storage.test/thumbnail_v1.jpg');
 
@@ -70,7 +70,7 @@ final class ImageControllerTest extends TestCase
 
     public function testAStorageFailureIsAServerError(): void
     {
-        $this->storageFactory->shouldReceive('create')->andReturn($this->storage);
+        $this->storages->shouldReceive('get')->andReturn($this->storage);
         $this->storage->shouldReceive('upload')->andThrow(new RuntimeException('Storage is down'));
 
         $response = $this->upload('local');
@@ -81,8 +81,8 @@ final class ImageControllerTest extends TestCase
 
     public function testInvalidInputNeverReachesProcessingOrStorage(): void
     {
-        $this->imageProcessing->shouldNotReceive('resizeImage');
-        $this->storageFactory->shouldNotReceive('create');
+        $this->resizer->shouldNotReceive('cover');
+        $this->storages->shouldNotReceive('get');
 
         $response = $this->upload('ftp');
 
@@ -103,7 +103,7 @@ final class ImageControllerTest extends TestCase
             ->withUploadedFiles(['file' => $file])
             ->withParsedBody(['max_width' => '60', 'max_height' => '40', 'service' => $service]);
 
-        return Wiring::imageController(Wiring::resizeAndStoreImage($this->imageProcessing, $this->storageFactory))
+        return Wiring::imageController(Wiring::resizeAndStoreImage($this->resizer, $this->storages))
             ->upload($request);
     }
 }
