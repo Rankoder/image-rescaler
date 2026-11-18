@@ -71,6 +71,8 @@ Only the variables of the storage you use need real values.
 
 ## API
 
+The contract is [openapi.yaml](openapi.yaml) (OpenAPI 3.0): fields, limits, responses and error codes. Contract tests check the responses against it.
+
 Any other path or method returns `404` with `{"status": "error", "message": "Not found"}`.
 
 ### `GET /health`
