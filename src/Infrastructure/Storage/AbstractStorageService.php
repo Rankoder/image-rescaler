@@ -14,11 +14,14 @@ abstract class AbstractStorageService implements StorageServiceInterface
 {
     public function upload(ImageValueObject $image): string
     {
-        $filename = $this->generateVersionedFilename($image->getFilename());
-        $this->store($image->getPath(), $filename);
-        $this->removeTemporaryFile($image->getPath());
+        try {
+            $filename = $this->generateVersionedFilename($image->getFilename());
+            $this->store($image->getPath(), $filename);
 
-        return $filename;
+            return $filename;
+        } finally {
+            $this->removeTemporaryFile($image->getPath());
+        }
     }
 
     abstract protected function fileExists(string $filename): bool;

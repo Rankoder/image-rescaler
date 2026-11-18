@@ -40,8 +40,6 @@ final class ImageControllerTest extends TestCase
         $this->resizer = Mockery::mock(ImageResizer::class);
         $this->storages = Mockery::mock(StorageRegistry::class);
         $this->storage = Mockery::mock(StorageServiceInterface::class);
-
-        $this->resizer->shouldReceive('cover')->andReturn(new ImageValueObject('/tmp/thumbnail.jpg', 'thumbnail.jpg'));
     }
 
     /**
@@ -57,6 +55,7 @@ final class ImageControllerTest extends TestCase
     #[DataProvider('services')]
     public function testStoresInTheChosenServiceAndAnswersWithItsPathAndUrl(string $service): void
     {
+        $this->resizerProducesAnImage();
         $this->storages->shouldReceive('get')->once()->with(StorageType::from($service))->andReturn($this->storage);
         $this->storage->shouldReceive('upload')->once()->andReturn('thumbnail_v1.jpg');
         $this->storage->shouldReceive('getPublicUrl')->with('thumbnail_v1.jpg')->andReturn('https://storage.test/thumbnail_v1.jpg');
@@ -73,6 +72,7 @@ final class ImageControllerTest extends TestCase
     public function testAStorageFailureIsAServerErrorWhoseDetailsGoOnlyToTheLog(): void
     {
         $failure = new RuntimeException('Failed to upload file to S3: bucket secret-bucket, key /tmp/x.jpg');
+        $this->resizerProducesAnImage();
         $this->storages->shouldReceive('get')->andReturn($this->storage);
         $this->storage->shouldReceive('upload')->andThrow($failure);
         $logger = Mockery::mock(LoggerInterface::class);
@@ -84,6 +84,14 @@ final class ImageControllerTest extends TestCase
         $this->assertSame('{"status":"error","message":"The image could not be processed or stored."}', (string) $response->getBody());
     }
 
+    public function testAStorageThatCannotBeBuiltFailsBeforeAnyImageIsWritten(): void
+    {
+        $this->storages->shouldReceive('get')->andThrow(new RuntimeException('Dropbox access token is not set.'));
+        $this->resizer->shouldNotReceive('cover');
+
+        $this->assertSame(500, $this->upload('dropbox')->getStatusCode());
+    }
+
     public function testInvalidInputNeverReachesProcessingOrStorage(): void
     {
         $this->resizer->shouldNotReceive('cover');
@@ -92,6 +100,11 @@ final class ImageControllerTest extends TestCase
         $response = $this->upload('ftp');
 
         $this->assertSame(422, $response->getStatusCode());
+    }
+
+    private function resizerProducesAnImage(): void
+    {
+        $this->resizer->shouldReceive('cover')->andReturn(new ImageValueObject('/tmp/thumbnail.jpg', 'thumbnail.jpg'));
     }
 
     private function upload(string $service, LoggerInterface $logger = new NullLogger()): ResponseInterface

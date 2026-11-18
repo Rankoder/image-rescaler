@@ -20,7 +20,8 @@ final readonly class InterventionImageResizer implements ImageResizer
         $image = $this->imageManager->decodePath($sourcePath);
         $image->cover($width, $height);
 
-        $path = $this->temporaryDirectory . '/' . $filename;
+        // Unique per call, so parallel uploads under the same output name do not overwrite each other
+        $path = sprintf('%s/%s-%s', $this->temporaryDirectory, bin2hex(random_bytes(8)), $filename);
         $image->save($path);
 
         return new ImageValueObject($path, $filename);
