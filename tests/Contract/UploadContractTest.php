@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Contract;
 
-use App\Infrastructure\Controllers\ImageController;
+use Tests\Support\Wiring;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\ServerRequest;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -85,7 +85,7 @@ final class UploadContractTest extends TestCase
         $request = (new ServerRequest('POST', '/upload', ['Content-Type' => 'application/json']))
             ->withParsedBody(['max_width' => '60', 'max_height' => '40']);
 
-        $response = (new ImageController())->upload($request);
+        $response = Wiring::imageController()->upload($request);
 
         $this->assertErrors(400, [[null, 'malformed_request']], $response);
     }
@@ -252,7 +252,7 @@ final class UploadContractTest extends TestCase
 
     private function send(ServerRequest $request): ResponseInterface
     {
-        $response = (new ImageController())->upload($request);
+        $response = Wiring::imageController()->upload($request);
         $this->assertMatchesContract('post', '/upload', $response);
 
         return $response;

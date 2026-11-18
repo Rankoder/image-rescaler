@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration;
 
-use App\Infrastructure\Controllers\ImageController;
+use Tests\Support\Wiring;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\ServerRequest;
 use PHPUnit\Framework\TestCase;
@@ -56,13 +56,13 @@ final class UploadToLocalStorageTest extends TestCase
         $this->assertSame([40, 40, IMAGETYPE_JPEG], [$size[0], $size[1], $size[2]]);
     }
 
-    public function testDoesNotEnlargeAnImageSmallerThanTheRequestedBox(): void
+    public function testRejectsAnImageSmallerThanTheRequestedBoxInsteadOfEnlargingIt(): void
     {
-        $this->upload('photo.jpg', 600, 400);
+        $response = $this->upload('photo.jpg', 600, 400);
 
-        $size = getimagesize(self::STORAGE_DIR . $this->outputName . '_v1.jpg');
-        $this->assertNotFalse($size);
-        $this->assertSame([150, 150], [$size[0], $size[1]]);
+        $this->assertSame(422, $response->getStatusCode());
+        $this->assertSame('smaller_than_frame', $this->firstError($response)['code']);
+        $this->assertSame([], $this->storedFiles());
     }
 
     public function testASecondUploadUnderTheSameNameGetsTheNextVersion(): void
@@ -79,26 +79,14 @@ final class UploadToLocalStorageTest extends TestCase
         );
     }
 
-    public function testRejectsAFileTypeThatIsNotAllowed(): void
+    public function testRejectsAFileWhoseNameDoesNotMatchItsContent(): void
     {
         $response = $this->upload('photo.gif', 60, 40);
 
-        $this->assertSame('error', $this->json($response)['status']);
+        $this->assertSame(422, $response->getStatusCode());
         $this->assertSame(
-            'Invalid image file type: gif. Allowed types are: jpeg, png, jpg',
-            $this->json($response)['message'],
-        );
-        $this->assertSame([], $this->storedFiles());
-    }
-
-    public function testRejectsDimensionsAboveTheLimit(): void
-    {
-        $response = $this->upload('photo.jpg', 5001, 40);
-
-        $this->assertSame('error', $this->json($response)['status']);
-        $this->assertSame(
-            'Image dimensions exceed the maximum allowed size of 5000x5000.',
-            $this->json($response)['message'],
+            ['field' => 'file', 'code' => 'extension_mismatch', 'message' => 'The file is a JPEG image, so its name must end with .jpg or .jpeg.'],
+            $this->firstError($response),
         );
         $this->assertSame([], $this->storedFiles());
     }
@@ -111,7 +99,7 @@ final class UploadToLocalStorageTest extends TestCase
             clientFilename: $clientFilename,
         );
 
-        $request = (new ServerRequest('POST', '/upload'))
+        $request = (new ServerRequest('POST', '/upload', ['Content-Type' => 'multipart/form-data; boundary=test']))
             ->withUploadedFiles(['file' => $uploadedFile])
             ->withParsedBody([
                 'service' => 'local',
@@ -120,7 +108,7 @@ final class UploadToLocalStorageTest extends TestCase
                 'output_filename' => $this->outputName,
             ]);
 
-        return (new ImageController())->upload($request);
+        return Wiring::imageController()->upload($request);
     }
 
     /**
@@ -132,6 +120,18 @@ final class UploadToLocalStorageTest extends TestCase
         $this->assertIsArray($decoded);
 
         return $decoded;
+    }
+
+    /**
+     * @return array<mixed>
+     */
+    private function firstError(ResponseInterface $response): array
+    {
+        $errors = $this->json($response)['errors'] ?? null;
+        $this->assertIsArray($errors);
+        $this->assertIsArray($errors[0] ?? null);
+
+        return $errors[0];
     }
 
     /**

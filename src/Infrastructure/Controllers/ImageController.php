@@ -4,134 +4,111 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Controllers;
 
-use App\Application\Services\ImageProcessingService;
-use App\Application\Services\StorageServiceFactory;
-use App\Application\Services\ImageValidationService;
+use App\Application\Services\ResizeAndStoreImage;
+use App\Application\Validation\ErrorCode;
+use App\Application\Validation\ResizeInput;
+use App\Application\Validation\SourceFile;
+use App\Application\Validation\ValidationError;
+use App\Application\Validation\ValidationFailed;
+use Exception;
+use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Nyholm\Psr7\Factory\Psr17Factory;
-use Dotenv\Dotenv;
+use Psr\Http\Message\StreamFactoryInterface;
+use Psr\Http\Message\UploadedFileInterface;
+use RuntimeException;
 
-/**
- * ImageController handles the image upload, validation, processing, and storage.
- * It utilizes various services to achieve this functionality.
- */
-class ImageController
+final readonly class ImageController
 {
-    private Psr17Factory $psr17Factory;
-    private ImageProcessingService $imageProcessingService;
-    private StorageServiceFactory $storageServiceFactory;
-    private ImageValidationService $imageValidationService;
+    public function __construct(
+        private ResizeAndStoreImage $resizeAndStoreImage,
+        private ResponseFactoryInterface $responseFactory,
+        private StreamFactoryInterface $streamFactory,
+    ) {}
 
-    public function __construct()
-    {
-        $this->psr17Factory = new Psr17Factory();
-        $this->imageProcessingService = new ImageProcessingService();
-        $this->storageServiceFactory = new StorageServiceFactory();
-        $this->imageValidationService = new ImageValidationService();
-
-        $dotenv = Dotenv::createImmutable(__DIR__ . '/../../../');
-        $dotenv->load();
-    }
-
-    /**
-     * Handles the image upload and resizing.
-     *
-     * @param ServerRequestInterface $request
-     * @return ResponseInterface
-     */
     public function upload(ServerRequestInterface $request): ResponseInterface
     {
-        $parsedBody = $request->getParsedBody();
-        $uploadedFiles = $request->getUploadedFiles();
-
-        $file = $uploadedFiles['file'] ?? null;
-        $service = $parsedBody['service'] ?? 'local';
-        $maxWidth = (int) ($parsedBody['max_width'] ?? 0);
-        $maxHeight = (int) ($parsedBody['max_height'] ?? 0);
-        $outputFilename = $parsedBody['output_filename'] ?? '';
-
-        if (!$this->isValidRequest($file, $maxWidth, $maxHeight)) {
-            return $this->createErrorResponse('Invalid request parameters', 400);
+        if (!str_starts_with(strtolower($request->getHeaderLine('Content-Type')), 'multipart/form-data')) {
+            return $this->malformedRequest('The request must be multipart/form-data.');
         }
 
-        $fileArray = $this->getFileArray($file);
+        $file = $request->getUploadedFiles()['file'] ?? null;
+        if ($file instanceof UploadedFileInterface && $file->getError() === UPLOAD_ERR_PARTIAL) {
+            return $this->malformedRequest('The file was only partly uploaded.');
+        }
 
         try {
-            $this->imageValidationService->validate($fileArray, $maxWidth, $maxHeight);
+            $stored = $this->resizeAndStoreImage->handle($this->inputFrom($request, $file));
 
-            $uniqueFilename = $this->imageProcessingService->generateUniqueFilename($fileArray['name'], $outputFilename);
-            $imageValueObject = $this->imageProcessingService->resizeImage($fileArray, $maxWidth, $maxHeight, $uniqueFilename);
-
-            $storageService = $this->storageServiceFactory->create($service);
-            $uploadedFilePath = $storageService->upload($imageValueObject);
-            $uploadedFileUrl = $storageService->getPublicUrl($uploadedFilePath);
-
-            return $this->createSuccessResponse($uploadedFilePath, $uploadedFileUrl);
-        } catch (\Exception $e) {
-            return $this->createErrorResponse($e->getMessage(), 500);
+            return $this->json(200, ['status' => 'success', 'path' => $stored->path, 'url' => $stored->url]);
+        } catch (ValidationFailed $failure) {
+            return $this->json(422, [
+                'status' => 'error',
+                'errors' => array_map(
+                    static fn(ValidationError $error): array => [
+                        'field' => $error->field->value,
+                        'code' => $error->code->value,
+                        'message' => $error->message,
+                    ],
+                    $failure->errors,
+                ),
+            ]);
+        } catch (Exception $exception) {
+            return $this->json(500, ['status' => 'error', 'message' => $exception->getMessage()]);
         }
     }
 
-    /**
-     * Validates the request parameters.
-     *
-     * @param mixed $file
-     * @param int $maxWidth
-     * @param int $maxHeight
-     * @return bool
-     */
-    private function isValidRequest($file, int $maxWidth, int $maxHeight): bool
+    private function inputFrom(ServerRequestInterface $request, mixed $file): ResizeInput
     {
-        return $file !== null && $maxWidth > 0 && $maxHeight > 0;
+        $fields = $request->getParsedBody();
+        $field = static fn(string $name): ?string => is_array($fields) && is_string($fields[$name] ?? null) ? $fields[$name] : null;
+
+        return new ResizeInput(
+            $file instanceof UploadedFileInterface ? $this->sourceFile($file) : null,
+            $field('max_width'),
+            $field('max_height'),
+            $field('service'),
+            $field('output_filename'),
+        );
     }
 
-    /**
-     * Converts the uploaded file to an array.
-     *
-     * @param mixed $file
-     * @return array
-     */
-    private function getFileArray($file): array
+    private function sourceFile(UploadedFileInterface $file): ?SourceFile
     {
-        return [
-            'tmp_name' => $file->getStream()->getMetadata('uri'),
-            'name' => $file->getClientFilename(),
-        ];
+        $name = $file->getClientFilename() ?? '';
+
+        return match ($file->getError()) {
+            UPLOAD_ERR_OK => SourceFile::at($this->temporaryPath($file), $name),
+            UPLOAD_ERR_NO_FILE => null,
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => SourceFile::rejected(ErrorCode::TooLarge, $name),
+            default => throw new RuntimeException('The uploaded file could not be stored on the server.'),
+        };
     }
 
-    /**
-     * Creates an error response.
-     *
-     * @param string $message
-     * @param int $statusCode
-     * @return ResponseInterface
-     */
-    private function createErrorResponse(string $message, int $statusCode): ResponseInterface
+    private function temporaryPath(UploadedFileInterface $file): string
     {
-        $responseBody = json_encode(['status' => 'error', 'message' => $message]);
-        return $this->psr17Factory->createResponse($statusCode)
-            ->withHeader('Content-Type', 'application/json')
-            ->withBody($this->psr17Factory->createStream($responseBody));
+        $path = $file->getStream()->getMetadata('uri');
+        if (!is_string($path)) {
+            throw new RuntimeException('The uploaded file has no temporary path.');
+        }
+
+        return $path;
     }
 
-    /**
-     * Creates a success response.
-     *
-     * @param string $uploadedFilePath
-     * @param string $uploadedFileUrl
-     * @return ResponseInterface
-     */
-    private function createSuccessResponse(string $uploadedFilePath, string $uploadedFileUrl): ResponseInterface
+    private function malformedRequest(string $message): ResponseInterface
     {
-        $responseBody = json_encode([
-            'status' => 'success',
-            'path' => $uploadedFilePath,
-            'url' => $uploadedFileUrl,
+        return $this->json(400, [
+            'status' => 'error',
+            'errors' => [['field' => null, 'code' => 'malformed_request', 'message' => $message]],
         ]);
+    }
 
-        return $this->psr17Factory->createResponse(200)
+    /**
+     * @param array<string, mixed> $body
+     */
+    private function json(int $status, array $body): ResponseInterface
+    {
+        return $this->responseFactory->createResponse($status)
             ->withHeader('Content-Type', 'application/json')
-            ->withBody($this->psr17Factory->createStream($responseBody));
+            ->withBody($this->streamFactory->createStream(json_encode($body, JSON_THROW_ON_ERROR)));
     }
 }

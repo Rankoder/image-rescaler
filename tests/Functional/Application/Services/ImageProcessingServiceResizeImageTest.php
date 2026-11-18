@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Tests\Functional\Application\Services;
 
 use App\Application\Services\ImageProcessingService;
+use App\Application\Validation\ResizeRequest;
+use App\Domain\Enums\ImageFormat;
+use App\Domain\Enums\StorageType;
 use App\Domain\ValueObjects\ImageValueObject;
 use PHPUnit\Framework\TestCase;
 
@@ -35,12 +38,12 @@ class ImageProcessingServiceResizeImageTest extends TestCase
 
     public function testResizeImage(): void
     {
-        $file = ['tmp_name' => $this->testImagePath];
         $maxWidth = 50;
         $maxHeight = 50;
         $expectedTempFilePath = $this->tempDir . '/' . $this->outputFilename;
+        $request = new ResizeRequest($this->testImagePath, 'test_image.jpg', ImageFormat::Jpeg, $maxWidth, $maxHeight, StorageType::Local, null);
 
-        $result = $this->service->resizeImage($file, $maxWidth, $maxHeight, $this->outputFilename);
+        $result = $this->service->resizeImage($request, $this->outputFilename);
 
         $this->assertInstanceOf(ImageValueObject::class, $result);
         $this->assertSame($expectedTempFilePath, $result->getPath());

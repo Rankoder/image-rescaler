@@ -9,6 +9,11 @@ require __DIR__ . '/../../../vendor/autoload.php';
 use Dotenv\Dotenv;
 use App\Application\Services\StorageServiceFactory;
 use App\Application\Services\ImageProcessingService;
+use App\Application\Services\ResizeAndStoreImage;
+use App\Application\Validation\ResizeInput;
+use App\Application\Validation\ResizeRequestValidator;
+use App\Application\Validation\SourceFile;
+use App\Infrastructure\Image\LocalImageInspector;
 
 /**
  * Main function to handle the image resizing and upload.
@@ -78,18 +83,22 @@ function displayUsage(): void
  */
 function resizeAndUploadImage(array $options): string
 {
-    $filePath = $options['f'];
-    $service = $options['s'] ?? 'local';
-    $maxWidth = (int) $options['w'];
-    $maxHeight = (int) $options['h'];
-    $outputFilename = $options['o'] ?? '';
+    $option = static fn(string $name): ?string => is_string($options[$name] ?? null) ? $options[$name] : null;
+    $filePath = $option('f') ?? '';
 
-    $imageProcessingService = new ImageProcessingService();
-    $versionedFilename = $imageProcessingService->generateUniqueFilename(basename($filePath), $outputFilename);
-    $image = $imageProcessingService->resizeImage(['tmp_name' => $filePath, 'name' => basename($filePath)], $maxWidth, $maxHeight, $versionedFilename);
+    $resizeAndStoreImage = new ResizeAndStoreImage(
+        new ResizeRequestValidator(new LocalImageInspector()),
+        new ImageProcessingService(),
+        new StorageServiceFactory(),
+    );
 
-    $storageService = StorageServiceFactory::create($service);
-    return $storageService->upload($image);
+    return $resizeAndStoreImage->handle(new ResizeInput(
+        SourceFile::at($filePath, basename($filePath)),
+        $option('w'),
+        $option('h'),
+        $option('s'),
+        $option('o'),
+    ))->path;
 }
 
 // Run the script
