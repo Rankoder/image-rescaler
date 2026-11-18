@@ -93,7 +93,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ValidationError'
         '500':
-          description: Processing or storage failed
+          description: |
+            Processing or storage failed. The message is always the same; the details (exception,
+            bucket, paths) go to the server log only.
           content:
             application/json:
               schema:
@@ -184,3 +186,4 @@ components:
           enum: [error]
         message:
           type: string
+          example: The image could not be processed or stored.

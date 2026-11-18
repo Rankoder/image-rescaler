@@ -119,7 +119,7 @@ Invalid fields return `422` with all errors at once; a request that is not `mult
 ]}
 ```
 
-The codes are listed in [openapi.yaml](openapi.yaml). Processing and storage failures return `500` with `{"status": "error", "message": "..."}`.
+The codes are listed in [openapi.yaml](openapi.yaml). Processing and storage failures return `500` with `{"status": "error", "message": "The image could not be processed or stored."}`; the details go to the container log (`docker compose logs web`).
 
 To send these requests from PhpStorm, with ready examples and checks of the responses, follow [docs/phpstorm-http-client.md](docs/phpstorm-http-client.md).
 

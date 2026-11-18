@@ -17,6 +17,8 @@ use Nyholm\Psr7\ServerRequest;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use RuntimeException;
 use Tests\Support\Wiring;
 
@@ -68,15 +70,18 @@ final class ImageControllerTest extends TestCase
         );
     }
 
-    public function testAStorageFailureIsAServerError(): void
+    public function testAStorageFailureIsAServerErrorWhoseDetailsGoOnlyToTheLog(): void
     {
+        $failure = new RuntimeException('Failed to upload file to S3: bucket secret-bucket, key /tmp/x.jpg');
         $this->storages->shouldReceive('get')->andReturn($this->storage);
-        $this->storage->shouldReceive('upload')->andThrow(new RuntimeException('Storage is down'));
+        $this->storage->shouldReceive('upload')->andThrow($failure);
+        $logger = Mockery::mock(LoggerInterface::class);
+        $logger->shouldReceive('error')->once()->with('Upload failed', ['exception' => $failure]);
 
-        $response = $this->upload('local');
+        $response = $this->upload('local', $logger);
 
         $this->assertSame(500, $response->getStatusCode());
-        $this->assertSame('{"status":"error","message":"Storage is down"}', (string) $response->getBody());
+        $this->assertSame('{"status":"error","message":"The image could not be processed or stored."}', (string) $response->getBody());
     }
 
     public function testInvalidInputNeverReachesProcessingOrStorage(): void
@@ -89,7 +94,7 @@ final class ImageControllerTest extends TestCase
         $this->assertSame(422, $response->getStatusCode());
     }
 
-    private function upload(string $service): ResponseInterface
+    private function upload(string $service, LoggerInterface $logger = new NullLogger()): ResponseInterface
     {
         $factory = new Psr17Factory();
         $file = $factory->createUploadedFile(
@@ -103,7 +108,7 @@ final class ImageControllerTest extends TestCase
             ->withUploadedFiles(['file' => $file])
             ->withParsedBody(['max_width' => '60', 'max_height' => '40', 'service' => $service]);
 
-        return Wiring::imageController(Wiring::resizeAndStoreImage($this->resizer, $this->storages))
+        return Wiring::imageController(Wiring::resizeAndStoreImage($this->resizer, $this->storages), $logger)
             ->upload($request);
     }
 }

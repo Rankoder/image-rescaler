@@ -13,6 +13,8 @@ use App\Infrastructure\Config\AppConfig;
 use App\Infrastructure\Container;
 use App\Infrastructure\Controllers\ImageController;
 use App\Infrastructure\Image\LocalImageInspector;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 /**
  * The application's own Container, configured from phpunit.xml, with a way to swap the outside world for mocks.
@@ -41,14 +43,18 @@ final class Wiring
         );
     }
 
-    public static function imageController(?ResizeAndStoreImage $resizeAndStoreImage = null): ImageController
-    {
-        if ($resizeAndStoreImage === null) {
-            return self::container()->imageController();
-        }
-
+    public static function imageController(
+        ?ResizeAndStoreImage $resizeAndStoreImage = null,
+        LoggerInterface $logger = new NullLogger(),
+    ): ImageController {
         $factory = self::container()->httpFactory();
 
-        return new ImageController($resizeAndStoreImage, $factory, $factory, self::config()->postMaxSize);
+        return new ImageController(
+            $resizeAndStoreImage ?? self::container()->resizeAndStoreImage(),
+            $factory,
+            $factory,
+            self::config()->postMaxSize,
+            $logger,
+        );
     }
 }
