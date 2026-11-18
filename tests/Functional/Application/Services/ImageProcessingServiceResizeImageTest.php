@@ -8,65 +8,84 @@ use App\Application\Services\ImageProcessingService;
 use App\Application\Validation\ResizeRequest;
 use App\Domain\Enums\ImageFormat;
 use App\Domain\Enums\StorageType;
-use App\Domain\ValueObjects\ImageValueObject;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Tests\Support\TestFiles;
 
-class ImageProcessingServiceResizeImageTest extends TestCase
+final class ImageProcessingServiceResizeImageTest extends TestCase
 {
-    private ImageProcessingService $service;
-    private string $testImagePath;
+    private TestFiles $files;
     private string $outputFilename;
-    private string $tempDir;
 
     protected function setUp(): void
     {
-        $this->service = new ImageProcessingService();
-        $this->tempDir = sys_get_temp_dir();
-        $this->testImagePath = $this->tempDir . '/test_image.jpg';
-        $this->outputFilename = 'resized_test_image.jpg';
-
-        $this->createTestImage();
-    }
-
-    private function createTestImage(): void
-    {
-        $image = imagecreatetruecolor(100, 100);
-        $backgroundColor = imagecolorallocate($image, 255, 255, 255);
-        imagefill($image, 0, 0, $backgroundColor);
-        imagejpeg($image, $this->testImagePath, 90);
-    }
-
-    public function testResizeImage(): void
-    {
-        $maxWidth = 50;
-        $maxHeight = 50;
-        $expectedTempFilePath = $this->tempDir . '/' . $this->outputFilename;
-        $request = new ResizeRequest($this->testImagePath, 'test_image.jpg', ImageFormat::Jpeg, $maxWidth, $maxHeight, StorageType::Local, null);
-
-        $result = $this->service->resizeImage($request, $this->outputFilename);
-
-        $this->assertInstanceOf(ImageValueObject::class, $result);
-        $this->assertSame($expectedTempFilePath, $result->getPath());
-        $this->assertSame($this->outputFilename, $result->getFilename());
-
-        list($width, $height) = getimagesize($result->getPath());
-        $this->assertSame($maxWidth, $width);
-        $this->assertSame($maxHeight, $height);
-
-        $this->cleanupTestFiles([$this->testImagePath, $result->getPath()]);
+        $this->files = new TestFiles();
+        $this->outputFilename = uniqid('resize_test_');
     }
 
     protected function tearDown(): void
     {
-        $this->cleanupTestFiles([$this->testImagePath, $this->tempDir . '/' . $this->outputFilename]);
+        $this->files->remove();
+        foreach (glob(sys_get_temp_dir() . '/' . $this->outputFilename . '*') ?: [] as $path) {
+            unlink($path);
+        }
     }
 
-    private function cleanupTestFiles(array $filePaths): void
+    /**
+     * @return iterable<string, array{ImageFormat, int}>
+     */
+    public static function formats(): iterable
     {
-        foreach ($filePaths as $filePath) {
-            if (file_exists($filePath)) {
-                unlink($filePath);
-            }
-        }
+        yield 'JPEG' => [ImageFormat::Jpeg, IMAGETYPE_JPEG];
+        yield 'PNG' => [ImageFormat::Png, IMAGETYPE_PNG];
+        yield 'WebP' => [ImageFormat::Webp, IMAGETYPE_WEBP];
+    }
+
+    #[DataProvider('formats')]
+    public function testFillsTheFrameExactlyInTheFormatOfTheSource(ImageFormat $format, int $imageType): void
+    {
+        $source = match ($format) {
+            ImageFormat::Jpeg => $this->files->jpeg(150, 100),
+            ImageFormat::Png => $this->files->png(150, 100),
+            ImageFormat::Webp => $this->files->webp(150, 100),
+        };
+
+        $image = $this->resize($source, $format, 40, 60);
+
+        $size = getimagesize($image);
+        $this->assertNotFalse($size);
+        $this->assertSame([40, 60, $imageType], [$size[0], $size[1], $size[2]]);
+    }
+
+    public function testCutsTheOverflowEvenlyFromBothSides(): void
+    {
+        // 300 × 100, left half red, right half blue; scaled to 120 × 40, then 40 px cut from each side
+        $image = imagecreatefrompng($this->resize($this->files->png(300, 100), ImageFormat::Png, 40, 40));
+        $this->assertNotFalse($image);
+
+        $this->assertSame([255, 0, 0], $this->rgb($image, 5, 20));
+        $this->assertSame([0, 0, 255], $this->rgb($image, 34, 20));
+    }
+
+    private function resize(string $source, ImageFormat $format, int $width, int $height): string
+    {
+        $filename = $this->outputFilename . '.' . $format->extension();
+        $request = new ResizeRequest($source, 'source', $format, $width, $height, StorageType::Local, null);
+
+        $result = (new ImageProcessingService())->resizeImage($request, $filename);
+
+        $this->assertSame($filename, $result->getFilename());
+
+        return $result->getPath();
+    }
+
+    /**
+     * @return array{int, int, int}
+     */
+    private function rgb(\GdImage $image, int $x, int $y): array
+    {
+        $color = (int) imagecolorat($image, $x, $y);
+
+        return [($color >> 16) & 0xFF, ($color >> 8) & 0xFF, $color & 0xFF];
     }
 }

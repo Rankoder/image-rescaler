@@ -28,7 +28,8 @@ class ImageProcessingService
     public function resizeImage(ResizeRequest $request, string $outputFilename): ImageValueObject
     {
         $image = $this->imageManager->decodePath($request->sourcePath);
-        $image->scaleDown($request->width, $request->height);
+        // Validation guarantees the source is at least as large as the frame, so cover never enlarges it
+        $image->cover($request->width, $request->height);
 
         $tempFilePath = $this->getTemporaryFilePath($outputFilename);
         $image->save($tempFilePath);

@@ -40,7 +40,7 @@ final class UploadToLocalStorageTest extends TestCase
         }
     }
 
-    public function testStoresTheImageScaledDownToFitTheRequestedBoxKeepingItsAspectRatio(): void
+    public function testStoresTheImageCroppedToExactlyTheRequestedBox(): void
     {
         $response = $this->upload('photo.jpg', 60, 40);
 
@@ -53,7 +53,7 @@ final class UploadToLocalStorageTest extends TestCase
 
         $size = getimagesize(self::STORAGE_DIR . $storedName);
         $this->assertNotFalse($size);
-        $this->assertSame([40, 40, IMAGETYPE_JPEG], [$size[0], $size[1], $size[2]]);
+        $this->assertSame([60, 40, IMAGETYPE_JPEG], [$size[0], $size[1], $size[2]]);
     }
 
     public function testRejectsAnImageSmallerThanTheRequestedBoxInsteadOfEnlargingIt(): void

@@ -63,11 +63,10 @@ All settings come from `.env`:
 | `AWS_REGION` | S3 region, e.g. `eu-central-1` |
 | `AWS_BUCKET_NAME` | target bucket |
 | `DROPBOX_ACCESS_TOKEN` | Dropbox API token |
-| `ALLOWED_IMAGE_TYPES` | comma-separated MIME types, e.g. `image/jpeg,image/png` |
-| `MAX_FILE_SIZE` | maximum upload size in bytes |
-| `MAX_IMAGE_WIDTH`, `MAX_IMAGE_HEIGHT` | upper limit for the requested dimensions |
+| `ALLOWED_IMAGE_TYPES` | MIME types the storage step still checks by extension, `image/jpeg,image/jpg,image/png,image/webp` |
+| `MAX_FILE_SIZE` | size limit of the storage step in bytes, `5242880` |
 
-Only the variables of the storage you use need real values.
+The limits of the API itself (types, size, dimensions) are fixed by the contract, not by these variables. Only the variables of the storage you use need real values.
 
 ## API
 

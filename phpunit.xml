@@ -33,9 +33,7 @@
         <env name="AWS_REGION" value="eu-central-1" force="true"/>
         <env name="AWS_BUCKET_NAME" value="test-bucket" force="true"/>
         <env name="DROPBOX_ACCESS_TOKEN" value="test-dropbox-token" force="true"/>
-        <env name="ALLOWED_IMAGE_TYPES" value="image/jpeg,image/png,image/jpg" force="true"/>
+        <env name="ALLOWED_IMAGE_TYPES" value="image/jpeg,image/jpg,image/png,image/webp" force="true"/>
         <env name="MAX_FILE_SIZE" value="5242880" force="true"/>
-        <env name="MAX_IMAGE_WIDTH" value="5000" force="true"/>
-        <env name="MAX_IMAGE_HEIGHT" value="5000" force="true"/>
     </php>
 </phpunit>

@@ -175,36 +175,6 @@ parameters:
 			path: tests/Functional/Application/Services/DropboxStorageServiceTest.php
 
 		-
-			message: '#^Cannot use array destructuring on array\<int\|string, int\|string\>\|false\.$#'
-			identifier: offsetAccess.nonArray
-			count: 1
-			path: tests/Functional/Application/Services/ImageProcessingServiceResizeImageTest.php
-
-		-
-			message: '#^Method Tests\\Functional\\Application\\Services\\ImageProcessingServiceResizeImageTest\:\:cleanupTestFiles\(\) has parameter \$filePaths with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: tests/Functional/Application/Services/ImageProcessingServiceResizeImageTest.php
-
-		-
-			message: '#^Parameter \#1 \$filename of function file_exists expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: tests/Functional/Application/Services/ImageProcessingServiceResizeImageTest.php
-
-		-
-			message: '#^Parameter \#1 \$filename of function unlink expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: tests/Functional/Application/Services/ImageProcessingServiceResizeImageTest.php
-
-		-
-			message: '#^Parameter \#4 \$color of function imagefill expects int, int\<0, max\>\|false given\.$#'
-			identifier: argument.type
-			count: 1
-			path: tests/Functional/Application/Services/ImageProcessingServiceResizeImageTest.php
-
-		-
 			message: '#^Method Tests\\Functional\\Application\\Services\\LocalStorageServiceTest\:\:cleanupTestFiles\(\) has parameter \$filePaths with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
