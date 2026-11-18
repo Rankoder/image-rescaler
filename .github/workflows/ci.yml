@@ -29,3 +29,18 @@ jobs:
       - run: cp .env-example .env
 
       - run: composer check
+
+  prod-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # compose.prod.yaml reads settings from .env and mounts it; the example file is enough to start
+      - run: cp .env-example .env
+
+      - run: docker compose -f compose.prod.yaml up --build -d --wait --wait-timeout 120
+
+      - run: curl --fail --silent http://localhost:8080/health
+
+      - if: failure()
+        run: docker compose -f compose.prod.yaml logs web

@@ -50,7 +50,7 @@ docker compose -f compose.prod.yaml up --build -d
 docker compose -f compose.prod.yaml ps      # STATUS shows (healthy)
 ```
 
-It publishes the same port 8080, so stop the development container first (`docker compose stop`). Settings come from the same `.env`; files stored with the `local` service live in the `storage` volume.
+It publishes the same host port as the development container, `APP_PORT` from `.env`, so stop that one first (`docker compose stop`). Settings come from the same `.env`; files stored with the `local` service live in the `storage` volume.
 
 ## Configuration
 
@@ -132,18 +132,31 @@ Tests and quality tools run in the container as Composer scripts:
 
 ```sh
 docker compose exec web composer test                # all tests; test:unit, test:functional or test:integration for one suite
-docker compose exec web composer phpstan             # static analysis, level max
+docker compose exec web composer phpstan             # static analysis, level max, and architecture rules
 docker compose exec web composer cs                  # code style check (PER-CS); cs:fix applies it
 docker compose exec web composer check               # cs, phpstan and test in one go, as before a PR
 ```
 
 `docker compose exec web composer list` shows them with descriptions. Existing PHPStan errors are recorded in `phpstan-baseline.neon`; new code must pass without adding to it.
 
+The architecture rules are PHPStan rules from phpat, written as classes in `tests/Architecture`: which layer and which packages a layer may not depend on. Calls to I/O functions (`file_put_contents`, `getenv`) and scripts without a class (`resize.php`) are out of their reach and stay with code review.
+
 Unit tests cover single classes, functional tests a service with its external client mocked, integration tests the whole upload through the controller into `storage/`, without mocks. S3 and Dropbox have no integration tests, since they need real accounts.
 
 Tests take their environment variables from `phpunit.xml`, not from `.env`, and run in random order, so they cannot lean on each other. PHPUnit prints the seed; `docker compose exec web vendor/bin/phpunit --order-by random --random-order-seed <seed>` repeats that order.
 
 To run and debug tests from PhpStorm (Docker interpreter, Xdebug), follow [docs/phpstorm-xdebug.md](docs/phpstorm-xdebug.md).
+
+### Checking a branch from scratch
+
+`bin/fresh-check` runs on the host and checks a pushed branch the way a new clone would see it: it clones the branch into a temporary directory, copies `.env-example` to `.env`, builds the dev image without cache, waits for `GET /health` and runs `composer check`. With `--prod` it then builds the production image and waits until it is healthy. Containers, images and the clone are removed at the end, also after a failure.
+
+```sh
+bin/fresh-check <branch>                # port 8090 by default
+bin/fresh-check --prod <branch> 8091    # also the production image, on port 8091
+```
+
+Besides Docker it needs `git` and `curl` on the host. It runs next to the development container; the port only has to be free. CI runs `composer check` and the production image health check on every push.
 
 ## Project structure
 
@@ -158,9 +171,10 @@ config/                    S3 config from environment variables (dropbox.php is 
 docker/entrypoint.sh       dev container start: dependencies, storage dir, Apache
 docker/php.ini             PHP settings: errors to the log, not to responses
 docker/xdebug.ini          Xdebug settings, dev image only
+bin/fresh-check            check of a pushed branch from a fresh clone
 docs/                      step-by-step guides, linked from this README
 http/                      PhpStorm HTTP client requests (api.http) and environments
-tests/                     Unit, Functional and Integration (PHPUnit); fixtures/ holds the test image
+tests/                     Unit, Functional and Integration (PHPUnit), Architecture (phpat); fixtures/ holds the test image
 phpstan.neon.dist          PHPStan config; phpstan-baseline.neon holds existing errors
 .php-cs-fixer.dist.php     PHP CS Fixer config
 ```

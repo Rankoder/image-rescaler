@@ -79,6 +79,42 @@ parameters:
 			path: src/Application/Services/DropboxStorageService.php
 
 		-
+			message: '#^testApplicationReachesTheOutsideWorldOnlyThroughAdapters\: App\\Application\\Services\\DropboxStorageService should not depend on Dotenv\\Dotenv$#'
+			identifier: phpat.testApplicationReachesTheOutsideWorldOnlyThroughAdapters
+			count: 1
+			path: src/Application/Services/DropboxStorageService.php
+
+		-
+			message: '#^testApplicationReachesTheOutsideWorldOnlyThroughAdapters\: App\\Application\\Services\\DropboxStorageService should not depend on Kunnu\\Dropbox\\Dropbox$#'
+			identifier: phpat.testApplicationReachesTheOutsideWorldOnlyThroughAdapters
+			count: 2
+			path: src/Application/Services/DropboxStorageService.php
+
+		-
+			message: '#^testApplicationReachesTheOutsideWorldOnlyThroughAdapters\: App\\Application\\Services\\DropboxStorageService should not depend on Kunnu\\Dropbox\\DropboxApp$#'
+			identifier: phpat.testApplicationReachesTheOutsideWorldOnlyThroughAdapters
+			count: 1
+			path: src/Application/Services/DropboxStorageService.php
+
+		-
+			message: '#^testApplicationReachesTheOutsideWorldOnlyThroughAdapters\: App\\Application\\Services\\DropboxStorageService should not depend on Kunnu\\Dropbox\\DropboxFile$#'
+			identifier: phpat.testApplicationReachesTheOutsideWorldOnlyThroughAdapters
+			count: 1
+			path: src/Application/Services/DropboxStorageService.php
+
+		-
+			message: '#^testApplicationReachesTheOutsideWorldOnlyThroughAdapters\: App\\Application\\Services\\DropboxStorageService should not depend on Kunnu\\Dropbox\\Exceptions\\DropboxClientException$#'
+			identifier: phpat.testApplicationReachesTheOutsideWorldOnlyThroughAdapters
+			count: 2
+			path: src/Application/Services/DropboxStorageService.php
+
+		-
+			message: '#^testApplicationReachesTheOutsideWorldOnlyThroughAdapters\: App\\Application\\Services\\DropboxStorageService should not depend on Kunnu\\Dropbox\\Models\\FileMetadata$#'
+			identifier: phpat.testApplicationReachesTheOutsideWorldOnlyThroughAdapters
+			count: 1
+			path: src/Application/Services/DropboxStorageService.php
+
+		-
 			message: '#^Method App\\Application\\Services\\ImageProcessingService\:\:resizeImage\(\) has parameter \$file with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -148,6 +184,18 @@ parameters:
 			message: '#^Property App\\Application\\Services\\S3StorageService\:\:\$bucket \(string\) does not accept mixed\.$#'
 			identifier: assign.propertyType
 			count: 1
+			path: src/Application/Services/S3StorageService.php
+
+		-
+			message: '#^testApplicationReachesTheOutsideWorldOnlyThroughAdapters\: App\\Application\\Services\\S3StorageService should not depend on Aws\\Exception\\AwsException$#'
+			identifier: phpat.testApplicationReachesTheOutsideWorldOnlyThroughAdapters
+			count: 2
+			path: src/Application/Services/S3StorageService.php
+
+		-
+			message: '#^testApplicationReachesTheOutsideWorldOnlyThroughAdapters\: App\\Application\\Services\\S3StorageService should not depend on Aws\\S3\\S3Client$#'
+			identifier: phpat.testApplicationReachesTheOutsideWorldOnlyThroughAdapters
+			count: 2
 			path: src/Application/Services/S3StorageService.php
 
 		-
