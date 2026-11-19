@@ -10,22 +10,15 @@ use PHPat\Test\PHPat;
 
 final class LayerDependencyTest
 {
-    // Every package in composer.json "require" adds its namespace here
-    public function test_domain_depends_on_no_other_layer_and_no_package(): Rule
+    // A whitelist: a new package or layer is forbidden in Domain without touching this rule
+    public function test_domain_depends_only_on_itself_and_php(): Rule
     {
         return PHPat::rule()
             ->classes(Selector::inNamespace('App\Domain'))
-            ->shouldNotDependOn()
+            ->canOnlyDependOn()
             ->classes(
-                Selector::inNamespace('App\Application'),
-                Selector::inNamespace('App\Infrastructure'),
-                Selector::inNamespace('Aws'),
-                Selector::inNamespace('Bramus'),
-                Selector::inNamespace('GuzzleHttp'),
-                Selector::inNamespace('Intervention'),
-                Selector::inNamespace('Kunnu'),
-                Selector::inNamespace('Nyholm'),
-                Selector::inNamespace('Psr'),
+                Selector::inNamespace('App\Domain'),
+                Selector::isStandardClass(),
             )
             ->because('L1: Domain holds value objects, interfaces and enums only');
     }
