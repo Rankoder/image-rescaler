@@ -18,7 +18,7 @@ final readonly class InputDirectory implements ImageLibrary
 
     public function __construct(
         private string $path,
-        private ExclusiveCopy $copy = new ExclusiveCopy(),
+        private ExclusiveCopy $copy,
     ) {}
 
     public function names(): array
@@ -30,6 +30,13 @@ final readonly class InputDirectory implements ImageLibrary
         sort($names);
 
         return $names;
+    }
+
+    public function path(string $name): ?string
+    {
+        $source = $this->sourceFile($name);
+
+        return $source->problem === null ? $source->path : null;
     }
 
     public function addIfAbsent(string $sourcePath, string $name): bool

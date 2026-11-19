@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Functional\Infrastructure\Storage;
 
 use App\Domain\ValueObjects\ImageValueObject;
+use App\Infrastructure\Filesystem\ExclusiveCopy;
 use App\Infrastructure\Storage\LocalStorageService;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -20,7 +21,7 @@ final class LocalStorageServiceTest extends TestCase
     {
         $this->files = new TestFiles();
         $this->storage = new TestFiles();
-        $this->service = new LocalStorageService($this->storage->directory(), 'http://images.test:8081');
+        $this->service = new LocalStorageService($this->storage->directory(), 'http://images.test:8081', new ExclusiveCopy());
     }
 
     protected function tearDown(): void
@@ -45,7 +46,7 @@ final class LocalStorageServiceTest extends TestCase
     public function testCreatesTheDirectoryWhenItIsMissing(): void
     {
         $directory = $this->storage->directory() . '/nested';
-        $service = new LocalStorageService($directory, 'http://images.test');
+        $service = new LocalStorageService($directory, 'http://images.test', new ExclusiveCopy());
 
         $service->upload(new ImageValueObject($this->files->withContent('x', 'a.png'), 'a.png'));
 
@@ -58,7 +59,7 @@ final class LocalStorageServiceTest extends TestCase
     {
         $temporary = $this->files->withContent('image', 'thumb.jpg');
         $blocked = $this->files->withContent('a file where the directory should be', 'blocked');
-        $service = new LocalStorageService($blocked . '/storage', 'http://images.test');
+        $service = new LocalStorageService($blocked . '/storage', 'http://images.test', new ExclusiveCopy());
 
         try {
             @$service->upload(new ImageValueObject($temporary, 'thumb.jpg'));

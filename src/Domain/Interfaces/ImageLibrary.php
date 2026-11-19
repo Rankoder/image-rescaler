@@ -15,6 +15,11 @@ interface ImageLibrary
     public function names(): array;
 
     /**
+     * The readable path of the image of that name, null when the directory has none.
+     */
+    public function path(string $name): ?string;
+
+    /**
      * Adds the file under the name unless an image of that name exists; false when the name is taken.
      */
     public function addIfAbsent(string $sourcePath, string $name): bool;

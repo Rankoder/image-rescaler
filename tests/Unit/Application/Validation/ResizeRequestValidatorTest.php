@@ -17,6 +17,7 @@ use App\Application\Validation\ValidationFailed;
 use App\Domain\Enums\ImageFormat;
 use App\Domain\Enums\StorageType;
 use App\Domain\Interfaces\ImageInspector;
+use App\Domain\Interfaces\ImageLibrary;
 use App\Domain\ValueObjects\ImageInfo;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -124,6 +125,56 @@ final class ResizeRequestValidatorTest extends TestCase
         $this->assertSame([60, 40], [$request->width, $request->height]);
     }
 
+    public function testAnImageFromTheInputDirectoryBecomesTheSource(): void
+    {
+        $request = $this->validator(1000, new ImageInfo('image/png', 300, 200), ['portrait.png' => '/data/input/portrait.png'])
+            ->validate(new ResizeInput(null, '60', '40', image: 'portrait.png'));
+
+        $this->assertSame(['/data/input/portrait.png', 'portrait.png'], [$request->sourcePath, $request->sourceName]);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function imageNamesNotFound(): iterable
+    {
+        yield 'missing' => ['missing.png'];
+        yield 'parent directory' => ['../portrait.png'];
+        yield 'hidden file' => ['.portrait.png'];
+        yield 'other extension' => ['notes.txt'];
+    }
+
+    #[DataProvider('imageNamesNotFound')]
+    public function testAnImageNameThatIsNotAPlainImageInTheDirectoryIsNotFound(string $image): void
+    {
+        // The library would resolve these names, so only the validator's own rule can reject them
+        $library = ['../portrait.png' => '/etc/x', '.portrait.png' => '/x', 'notes.txt' => '/x'];
+
+        $this->assertFails(
+            [[Field::Image, ErrorCode::NotFound]],
+            $this->validator(1000, new ImageInfo('image/png', 300, 200), $library),
+            new ResizeInput(null, '60', '40', image: $image),
+        );
+    }
+
+    public function testFileAndImageTogetherConflictAlongsideTheOtherErrors(): void
+    {
+        $this->assertFails(
+            [[Field::Image, ErrorCode::ConflictsWithFile], [Field::MaxWidth, ErrorCode::OutOfRange]],
+            $this->validator(1000, new ImageInfo('image/png', 300, 200), ['portrait.png' => '/data/input/portrait.png']),
+            new ResizeInput(SourceFile::at('/tmp/upload', 'photo.png'), '39', '40', image: 'portrait.png'),
+        );
+    }
+
+    public function testFileRulesAreReportedForTheImageField(): void
+    {
+        $this->assertFails(
+            [[Field::Image, ErrorCode::SmallerThanFrame]],
+            $this->validator(1000, new ImageInfo('image/png', 30, 20), ['tiny.png' => '/data/input/tiny.png']),
+            new ResizeInput(null, '60', '40', image: 'tiny.png'),
+        );
+    }
+
     public function testEveryInvalidFieldIsReportedInTheOrderOfTheFields(): void
     {
         $this->assertFails(
@@ -155,7 +206,10 @@ final class ResizeRequestValidatorTest extends TestCase
         }
     }
 
-    private function validator(int $bytes, ?ImageInfo $image): ResizeRequestValidator
+    /**
+     * @param array<string, string> $library images in the input directory, name => path
+     */
+    private function validator(int $bytes, ?ImageInfo $image, array $library = []): ResizeRequestValidator
     {
         return new ResizeRequestValidator(new ImageFileRules(new readonly class ($bytes, $image) implements ImageInspector {
             public function __construct(private int $bytes, private ?ImageInfo $image) {}
@@ -169,6 +223,24 @@ final class ResizeRequestValidatorTest extends TestCase
             {
                 return $this->image;
             }
-        }), new NameRule());
+        }), new NameRule(), new readonly class ($library) implements ImageLibrary {
+            /** @param array<string, string> $images */
+            public function __construct(private array $images) {}
+
+            public function names(): array
+            {
+                return array_keys($this->images);
+            }
+
+            public function path(string $name): ?string
+            {
+                return $this->images[$name] ?? null;
+            }
+
+            public function addIfAbsent(string $sourcePath, string $name): bool
+            {
+                return false;
+            }
+        });
     }
 }

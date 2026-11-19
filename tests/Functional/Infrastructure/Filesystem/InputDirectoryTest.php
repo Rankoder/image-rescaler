@@ -6,6 +6,7 @@ namespace Tests\Functional\Infrastructure\Filesystem;
 
 use App\Application\Validation\ErrorCode;
 use App\Application\Validation\SourceFile;
+use App\Infrastructure\Filesystem\ExclusiveCopy;
 use App\Infrastructure\Filesystem\InputDirectory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -34,7 +35,7 @@ final class InputDirectoryTest extends TestCase
 
         $this->assertEquals(
             SourceFile::at((string) realpath($path), 'photo.jpg'),
-            (new InputDirectory($this->input->directory()))->sourceFile('photo.jpg'),
+            (new InputDirectory($this->input->directory(), new ExclusiveCopy()))->sourceFile('photo.jpg'),
         );
     }
 
@@ -51,7 +52,7 @@ final class InputDirectoryTest extends TestCase
     #[DataProvider('namesOutside')]
     public function testRejectsANameThatLeadsOutside(string $name): void
     {
-        $this->assertSame(ErrorCode::OutsideInputDirectory, (new InputDirectory($this->input->directory()))->sourceFile($name)->problem);
+        $this->assertSame(ErrorCode::OutsideInputDirectory, (new InputDirectory($this->input->directory(), new ExclusiveCopy()))->sourceFile($name)->problem);
     }
 
     public function testRejectsASymlinkThatPointsOutside(): void
@@ -59,19 +60,19 @@ final class InputDirectoryTest extends TestCase
         $target = $this->outside->jpeg(50, 50, 'secret.jpg');
         symlink($target, $this->input->directory() . '/link.jpg');
 
-        $this->assertSame(ErrorCode::OutsideInputDirectory, (new InputDirectory($this->input->directory()))->sourceFile('link.jpg')->problem);
+        $this->assertSame(ErrorCode::OutsideInputDirectory, (new InputDirectory($this->input->directory(), new ExclusiveCopy()))->sourceFile('link.jpg')->problem);
     }
 
     public function testAMissingFileIsNotFound(): void
     {
-        $this->assertSame(ErrorCode::NotFound, (new InputDirectory($this->input->directory()))->sourceFile('missing.jpg')->problem);
+        $this->assertSame(ErrorCode::NotFound, (new InputDirectory($this->input->directory(), new ExclusiveCopy()))->sourceFile('missing.jpg')->problem);
     }
 
     public function testADirectoryIsNotAFile(): void
     {
         mkdir($this->input->directory() . '/sub');
 
-        $problem = (new InputDirectory($this->input->directory()))->sourceFile('sub')->problem;
+        $problem = (new InputDirectory($this->input->directory(), new ExclusiveCopy()))->sourceFile('sub')->problem;
         rmdir($this->input->directory() . '/sub');
 
         $this->assertSame(ErrorCode::NotFound, $problem);
@@ -79,7 +80,7 @@ final class InputDirectoryTest extends TestCase
 
     public function testNothingIsFoundWhenTheDirectoryDoesNotExist(): void
     {
-        $this->assertSame(ErrorCode::NotFound, (new InputDirectory($this->input->directory() . '/missing'))->sourceFile('photo.jpg')->problem);
+        $this->assertSame(ErrorCode::NotFound, (new InputDirectory($this->input->directory() . '/missing', new ExclusiveCopy()))->sourceFile('photo.jpg')->problem);
     }
 
     public function testListsOnlyPlainImageNamesSorted(): void
@@ -90,7 +91,7 @@ final class InputDirectoryTest extends TestCase
         $this->input->withContent('notes', 'notes.txt');
         mkdir($this->input->directory() . '/sub.jpg');
 
-        $names = (new InputDirectory($this->input->directory()))->names();
+        $names = (new InputDirectory($this->input->directory(), new ExclusiveCopy()))->names();
         rmdir($this->input->directory() . '/sub.jpg');
 
         $this->assertSame(['a.jpg', 'b.png'], $names);
@@ -98,7 +99,7 @@ final class InputDirectoryTest extends TestCase
 
     public function testAddsAFileUnlessTheNameIsTaken(): void
     {
-        $directory = new InputDirectory($this->input->directory());
+        $directory = new InputDirectory($this->input->directory(), new ExclusiveCopy());
         $first = $this->outside->withContent('first', 'first.jpg');
         $second = $this->outside->withContent('second', 'second.jpg');
 

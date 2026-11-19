@@ -7,6 +7,7 @@ namespace Tests\Unit\Infrastructure\Storage;
 use App\Domain\Enums\StorageType;
 use App\Domain\Interfaces\StorageServiceInterface;
 use App\Infrastructure\Storage\LazyStorageRegistry;
+use App\Infrastructure\Filesystem\ExclusiveCopy;
 use App\Infrastructure\Storage\LocalStorageService;
 use LogicException;
 use PHPUnit\Framework\TestCase;
@@ -16,7 +17,7 @@ final class LazyStorageRegistryTest extends TestCase
 {
     public function testBuildsOnlyTheStorageThatIsAskedFor(): void
     {
-        $local = new LocalStorageService('/tmp', 'http://localhost');
+        $local = new LocalStorageService('/tmp', 'http://localhost', new ExclusiveCopy());
         $registry = new LazyStorageRegistry([
             StorageType::Local->value => static fn(): StorageServiceInterface => $local,
             StorageType::S3->value => static fn(): StorageServiceInterface => throw new RuntimeException('S3 is not configured'),

@@ -191,6 +191,21 @@ final class ImagesContractTest extends TestCase
         $this->assertErrors(422, [['image', 'conflicts_with_file']], 'post', '/upload', $response);
     }
 
+    #[RunInSeparateProcess]
+    public function testTheFileOrImageConflictComesWithTheOtherErrors(): void
+    {
+        $source = $this->files->jpeg(150, 150, 'photo.jpg');
+
+        $response = $this->dispatch('POST', '/upload', files: $this->uploaded($source, 'photo.jpg'), fields: [
+            'image' => 'landscape.jpg',
+            'max_width' => '39',
+            'max_height' => '40',
+            'service' => 'ftp',
+        ]);
+
+        $this->assertErrors(422, [['image', 'conflicts_with_file'], ['max_width', 'out_of_range'], ['service', 'unsupported']], 'post', '/upload', $response);
+    }
+
     /**
      * @param array<string, string> $fields
      */

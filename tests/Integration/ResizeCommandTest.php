@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration;
 
+use App\Infrastructure\Filesystem\ExclusiveCopy;
 use App\Infrastructure\Filesystem\InputDirectory;
 use App\Infrastructure\Cli\ResizeCommand;
 use PHPUnit\Framework\TestCase;
@@ -81,7 +82,7 @@ final class ResizeCommandTest extends TestCase
         $this->assertNotFalse($output);
         $this->assertNotFalse($errors);
 
-        $exitCode = (new ResizeCommand(Wiring::resizeAndStoreImage(), new InputDirectory($this->files->directory())))->run($options, $output, $errors);
+        $exitCode = (new ResizeCommand(Wiring::resizeAndStoreImage(), new InputDirectory($this->files->directory(), new ExclusiveCopy())))->run($options, $output, $errors);
 
         rewind($output);
         rewind($errors);
