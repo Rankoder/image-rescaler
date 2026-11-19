@@ -24,7 +24,11 @@ final class DropboxStorageService extends AbstractStorageService
             $link = $this->dropbox->postToAPI('/sharing/create_shared_link_with_settings', ['path' => $path])->getDecodedBody();
         } catch (DropboxClientException $e) {
             if (!str_contains($e->getMessage(), 'shared_link_already_exists')) {
-                throw new RuntimeException('Creating a Dropbox link failed: ' . $e->getMessage(), 0, $e);
+                throw new RuntimeException(sprintf(
+                    '%s is stored on Dropbox, but no shared link could be created; the token needs the sharing.write scope. Dropbox said: %s',
+                    $path,
+                    $e->getMessage(),
+                ), 0, $e);
             }
 
             $links = $this->dropbox->postToAPI('/sharing/list_shared_links', ['path' => $path, 'direct_only' => true])->getDecodedBody();

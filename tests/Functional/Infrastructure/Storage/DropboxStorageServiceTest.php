@@ -115,6 +115,10 @@ final class DropboxStorageServiceTest extends TestCase
             $this->fail('No exception was thrown.');
         } catch (RuntimeException $exception) {
             $this->assertSame($cause, $exception->getPrevious());
+            $this->assertStringStartsWith(
+                '/Apps/thumbnails/thumb_v1.jpg is stored on Dropbox, but no shared link could be created; the token needs the sharing.write scope.',
+                $exception->getMessage(),
+            );
         }
     }
 
