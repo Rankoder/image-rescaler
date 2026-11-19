@@ -168,7 +168,7 @@ docker compose exec web composer check               # cs, phpstan and test in o
 
 `docker compose exec web composer list` shows them with descriptions. PHPStan runs at level max without a baseline: the code has no recorded errors left.
 
-The architecture rules are PHPStan rules from phpat, written as classes in `tests/Architecture`: which layer and which packages a layer may not depend on. Calls to I/O functions (`file_put_contents`, `getenv`) and scripts without a class (`bin/resize`, `routes.php`) are out of their reach and stay with code review.
+The architecture rules are PHPStan rules from phpat, written as classes in `tests/Architecture`: Domain depends only on itself and PHP's own classes, Application never on Infrastructure or on packages that do I/O, and Application holds no adapter (no class implementing a Domain interface) and no controller or command. Calls to I/O functions (`file_put_contents`, `getenv`) and scripts without a class (`bin/resize`, `routes.php`) are out of their reach and stay with code review.
 
 Unit tests cover single classes, functional tests a service with its external client mocked, integration tests the whole upload through the controller into `storage/`, without mocks. Contract tests send one request per rule of `openapi.yaml` and check every response against it. S3 and Dropbox have no integration tests, since they need real accounts.
 

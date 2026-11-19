@@ -49,4 +49,27 @@ final class LayerDependencyTest
             )
             ->because('L3a: files, network and environment go through adapters');
     }
+
+    // Application uses the Domain ports; implementing one makes a class an adapter
+    public function test_application_holds_no_adapter(): Rule
+    {
+        return PHPat::rule()
+            ->classes(Selector::AllOf(
+                Selector::inNamespace('App\Application'),
+                Selector::implements('/^App\\\\Domain\\\\Interfaces\\\\/', true),
+            ))
+            ->shouldNotExist()
+            ->because('L4: adapters for the outside world live in Infrastructure');
+    }
+
+    public function test_application_holds_no_entry_point(): Rule
+    {
+        return PHPat::rule()
+            ->classes(Selector::AllOf(
+                Selector::inNamespace('App\Application'),
+                Selector::classname('/(Controller|Command)$/', true),
+            ))
+            ->shouldNotExist()
+            ->because('L4: HTTP controllers and the CLI entry live in Infrastructure');
+    }
 }
