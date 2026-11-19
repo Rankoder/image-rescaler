@@ -6,6 +6,8 @@ namespace App\Infrastructure;
 
 use App\Application\Services\OutputFilename;
 use App\Application\Services\ResizeAndStoreImage;
+use App\Application\Validation\ImageFileRules;
+use App\Application\Validation\NameRule;
 use App\Application\Validation\ResizeRequestValidator;
 use App\Domain\Enums\StorageType;
 use App\Domain\Interfaces\ImageResizer;
@@ -94,11 +96,16 @@ final readonly class Container
     public function resizeAndStoreImage(): ResizeAndStoreImage
     {
         return new ResizeAndStoreImage(
-            new ResizeRequestValidator(new LocalImageInspector()),
+            new ResizeRequestValidator($this->imageFileRules(), new NameRule()),
             new OutputFilename(),
             $this->imageResizer(),
             $this->storageRegistry(),
         );
+    }
+
+    public function imageFileRules(): ImageFileRules
+    {
+        return new ImageFileRules(new LocalImageInspector());
     }
 
     public function imageResizer(): ImageResizer

@@ -6,13 +6,13 @@ namespace Tests\Support;
 
 use App\Application\Services\OutputFilename;
 use App\Application\Services\ResizeAndStoreImage;
+use App\Application\Validation\NameRule;
 use App\Application\Validation\ResizeRequestValidator;
 use App\Domain\Interfaces\ImageResizer;
 use App\Domain\Interfaces\StorageRegistry;
 use App\Infrastructure\Config\AppConfig;
 use App\Infrastructure\Container;
 use App\Infrastructure\Controllers\ImageController;
-use App\Infrastructure\Image\LocalImageInspector;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -36,7 +36,7 @@ final class Wiring
         ?StorageRegistry $storages = null,
     ): ResizeAndStoreImage {
         return new ResizeAndStoreImage(
-            new ResizeRequestValidator(new LocalImageInspector()),
+            new ResizeRequestValidator(self::container()->imageFileRules(), new NameRule()),
             new OutputFilename(),
             $resizer ?? self::container()->imageResizer(),
             $storages ?? self::container()->storageRegistry(),

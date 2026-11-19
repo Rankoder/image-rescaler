@@ -20,4 +20,6 @@ enum ErrorCode: string
     case Unsupported = 'unsupported';
     case NotFound = 'not_found';
     case OutsideInputDirectory = 'outside_input_directory';
+    case ConflictsWithFile = 'conflicts_with_file';
+    case AlreadyExists = 'already_exists';
 }

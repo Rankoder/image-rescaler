@@ -6,6 +6,8 @@ namespace Tests\Unit\Application\Validation;
 
 use App\Application\Validation\ErrorCode;
 use App\Application\Validation\Field;
+use App\Application\Validation\ImageFileRules;
+use App\Application\Validation\NameRule;
 use App\Application\Validation\ResizeInput;
 use App\Application\Validation\ResizeRequest;
 use App\Application\Validation\ResizeRequestValidator;
@@ -155,7 +157,7 @@ final class ResizeRequestValidatorTest extends TestCase
 
     private function validator(int $bytes, ?ImageInfo $image): ResizeRequestValidator
     {
-        return new ResizeRequestValidator(new readonly class ($bytes, $image) implements ImageInspector {
+        return new ResizeRequestValidator(new ImageFileRules(new readonly class ($bytes, $image) implements ImageInspector {
             public function __construct(private int $bytes, private ?ImageInfo $image) {}
 
             public function sizeInBytes(string $path): int
@@ -167,6 +169,6 @@ final class ResizeRequestValidatorTest extends TestCase
             {
                 return $this->image;
             }
-        });
+        }), new NameRule());
     }
 }
