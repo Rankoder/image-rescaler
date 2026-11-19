@@ -7,7 +7,7 @@ namespace App\Application\Validation;
 final readonly class ValidationError
 {
     public function __construct(
-        public Field $field,
+        public ?Field $field,
         public ErrorCode $code,
         public string $message,
     ) {}

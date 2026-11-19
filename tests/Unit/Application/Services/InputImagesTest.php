@@ -12,8 +12,11 @@ use App\Application\Validation\NameRule;
 use App\Application\Validation\SourceFile;
 use App\Application\Validation\ValidationError;
 use App\Application\Validation\ValidationFailed;
+use App\Domain\Enums\ImageAddOutcome;
+use App\Domain\Enums\ImageFormat;
 use App\Domain\Interfaces\ImageInspector;
 use App\Domain\Interfaces\ImageLibrary;
+use App\Domain\Interfaces\ImageReencoder;
 use App\Domain\ValueObjects\ImageInfo;
 use PHPUnit\Framework\TestCase;
 
@@ -27,7 +30,7 @@ final class InputImagesTest extends TestCase
         $name = $this->images(new ImageInfo('image/webp', 300, 200))->add(SourceFile::at('/tmp/upload', 'photo.webp'), 'holiday');
 
         $this->assertSame('holiday.webp', $name);
-        $this->assertSame(['holiday.webp' => '/tmp/upload'], $this->stored);
+        $this->assertSame(['holiday.webp' => '/tmp/upload.reencoded.webp'], $this->stored);
     }
 
     public function testWithoutANameUsesASafeVersionOfTheFilesOwn(): void
@@ -66,8 +69,35 @@ final class InputImagesTest extends TestCase
         $this->assertSame('tiny.png', $name);
     }
 
+    public function testRejectsAdditionWhenTheLimitOfTenImagesIsReached(): void
+    {
+        for ($i = 1; $i <= 10; $i++) {
+            $this->stored["img_{$i}.jpg"] = '/existing';
+        }
+
+        $this->assertFails(
+            [[null, ErrorCode::LimitReached]],
+            fn(InputImages $images) => $images->add(SourceFile::at('/tmp/upload', 'extra.jpg'), 'extra'),
+            new ImageInfo('image/jpeg', 100, 100),
+        );
+        $this->assertCount(10, $this->stored);
+    }
+
+    public function testLimitAndFieldErrorsComeTogether(): void
+    {
+        for ($i = 1; $i <= 10; $i++) {
+            $this->stored["img_{$i}.jpg"] = '/existing';
+        }
+
+        $this->assertFails(
+            [[null, ErrorCode::LimitReached], [Field::Name, ErrorCode::InvalidCharacters]],
+            fn(InputImages $images) => $images->add(SourceFile::at('/tmp/upload', 'extra.jpg'), '../bad'),
+            new ImageInfo('image/jpeg', 100, 100),
+        );
+    }
+
     /**
-     * @param list<array{Field, ErrorCode}> $expected
+     * @param list<array{?Field, ErrorCode}> $expected
      * @param callable(InputImages): mixed $action
      */
     private function assertFails(array $expected, callable $action, ?ImageInfo $image): void
@@ -113,17 +143,27 @@ final class InputImagesTest extends TestCase
                 return $this->stored[$name] ?? null;
             }
 
-            public function addIfAbsent(string $sourcePath, string $name): bool
+            public function addWithinLimit(string $sourcePath, string $name, int $limit): ImageAddOutcome
             {
+                if (count($this->stored) >= $limit) {
+                    return ImageAddOutcome::LimitReached;
+                }
                 if (isset($this->stored[$name])) {
-                    return false;
+                    return ImageAddOutcome::AlreadyExists;
                 }
                 $this->stored[$name] = $sourcePath;
 
-                return true;
+                return ImageAddOutcome::Added;
             }
         };
 
-        return new InputImages($library, new ImageFileRules($inspector), new NameRule());
+        $reencoder = new readonly class implements ImageReencoder {
+            public function reencode(string $sourcePath, ImageFormat $format): string
+            {
+                return $sourcePath . '.reencoded.' . $format->extension();
+            }
+        };
+
+        return new InputImages($library, new ImageFileRules($inspector), new NameRule(), $reencoder);
     }
 }

@@ -6,6 +6,7 @@ namespace Tests\Functional\Infrastructure\Filesystem;
 
 use App\Application\Validation\ErrorCode;
 use App\Application\Validation\SourceFile;
+use App\Domain\Enums\ImageAddOutcome;
 use App\Infrastructure\Filesystem\ExclusiveCopy;
 use App\Infrastructure\Filesystem\InputDirectory;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -106,5 +107,18 @@ final class InputDirectoryTest extends TestCase
         $this->assertTrue($directory->addIfAbsent($first, 'photo.jpg'));
         $this->assertFalse($directory->addIfAbsent($second, 'photo.jpg'));
         $this->assertStringEqualsFile($this->input->directory() . '/photo.jpg', 'first');
+    }
+
+    public function testEnforcesTheImageLimitWhenAdding(): void
+    {
+        $directory = new InputDirectory($this->input->directory(), new ExclusiveCopy());
+        $first = $this->outside->withContent('first', 'first.jpg');
+        $second = $this->outside->withContent('second', 'second.jpg');
+        $third = $this->outside->withContent('third', 'third.jpg');
+
+        $this->assertSame(ImageAddOutcome::Added, $directory->addWithinLimit($first, 'one.jpg', 2));
+        $this->assertSame(ImageAddOutcome::Added, $directory->addWithinLimit($second, 'two.jpg', 2));
+        $this->assertSame(ImageAddOutcome::LimitReached, $directory->addWithinLimit($third, 'three.jpg', 2));
+        $this->assertSame(['one.jpg', 'two.jpg'], $directory->names());
     }
 }
