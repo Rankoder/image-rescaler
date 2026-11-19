@@ -56,6 +56,18 @@ final class DropboxStorageServiceTest extends TestCase
         $this->assertFileDoesNotExist($source);
     }
 
+    public function testTheRootFolderGivesASingleSlash(): void
+    {
+        $this->dropbox->shouldReceive('upload')
+            ->once()
+            ->with(Mockery::type(DropboxFile::class), '/thumb_v1.jpg', Mockery::any())
+            ->andReturn(new FileMetadata([]));
+
+        $service = new DropboxStorageService($this->dropbox, '/');
+
+        $this->assertSame('thumb_v1.jpg', $service->upload(new ImageValueObject($this->files->withContent('x', 'thumb.jpg'), 'thumb.jpg')));
+    }
+
     public function testAnErrorOtherThanAConflictFailsWithItsCause(): void
     {
         $source = $this->files->withContent('image', 'thumb.jpg');

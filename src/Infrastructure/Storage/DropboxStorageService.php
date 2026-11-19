@@ -56,6 +56,6 @@ final class DropboxStorageService extends AbstractStorageService
 
     private function path(string $filename): string
     {
-        return $this->directory . '/' . $filename;
+        return rtrim($this->directory, '/') . '/' . $filename;
     }
 }
