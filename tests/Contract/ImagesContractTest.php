@@ -64,7 +64,30 @@ final class ImagesContractTest extends TestCase
         $this->assertMatchesContract('post', '/images', $response);
         $this->assertSame(201, $response->getStatusCode());
         $this->assertSame(['status' => 'success', 'name' => 'holiday.webp'], $this->json($response));
-        $this->assertFileEquals($this->files->directory() . '/upload.webp', $this->input->directory() . '/holiday.webp');
+        $stored = $this->input->directory() . '/holiday.webp';
+        $this->assertFileExists($stored);
+        $size = getimagesize($stored);
+        $this->assertNotFalse($size);
+        $this->assertSame([400, 400], [$size[0], $size[1]]);
+        $this->assertSame('image/webp', $size['mime']);
+    }
+
+    #[RunInSeparateProcess]
+    public function testReencodesUploadedImageAndStripsExifAndGpsMetadata(): void
+    {
+        $source = $this->files->jpegWithExif(200, 150, 'camera.jpg');
+        $response = $this->addImage($source, 'camera.jpg', ['name' => 'clean']);
+
+        $this->assertMatchesContract('post', '/images', $response);
+        $this->assertSame(201, $response->getStatusCode());
+        $stored = $this->input->directory() . '/clean.jpg';
+        $this->assertFileExists($stored);
+        $size = getimagesize($stored);
+        $this->assertNotFalse($size);
+        $this->assertSame('image/jpeg', $size['mime']);
+        $bytes = (string) file_get_contents($stored);
+        $this->assertStringNotContainsString("Exif\x00\x00", $bytes);
+        $this->assertStringNotContainsString('GPSLatitude', $bytes);
     }
 
     #[RunInSeparateProcess]

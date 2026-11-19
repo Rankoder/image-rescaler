@@ -12,8 +12,10 @@ use App\Application\Validation\NameRule;
 use App\Application\Validation\SourceFile;
 use App\Application\Validation\ValidationError;
 use App\Application\Validation\ValidationFailed;
+use App\Domain\Enums\ImageFormat;
 use App\Domain\Interfaces\ImageInspector;
 use App\Domain\Interfaces\ImageLibrary;
+use App\Domain\Interfaces\ImageReencoder;
 use App\Domain\ValueObjects\ImageInfo;
 use PHPUnit\Framework\TestCase;
 
@@ -27,7 +29,7 @@ final class InputImagesTest extends TestCase
         $name = $this->images(new ImageInfo('image/webp', 300, 200))->add(SourceFile::at('/tmp/upload', 'photo.webp'), 'holiday');
 
         $this->assertSame('holiday.webp', $name);
-        $this->assertSame(['holiday.webp' => '/tmp/upload'], $this->stored);
+        $this->assertSame(['holiday.webp' => '/tmp/upload.reencoded.webp'], $this->stored);
     }
 
     public function testWithoutANameUsesASafeVersionOfTheFilesOwn(): void
@@ -124,6 +126,13 @@ final class InputImagesTest extends TestCase
             }
         };
 
-        return new InputImages($library, new ImageFileRules($inspector), new NameRule());
+        $reencoder = new readonly class implements ImageReencoder {
+            public function reencode(string $sourcePath, ImageFormat $format): string
+            {
+                return $sourcePath . '.reencoded.' . $format->extension();
+            }
+        };
+
+        return new InputImages($library, new ImageFileRules($inspector), new NameRule(), $reencoder);
     }
 }

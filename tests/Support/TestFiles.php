@@ -35,6 +35,20 @@ final class TestFiles
         return $path;
     }
 
+    /**
+     * A valid JPEG with an APP1 EXIF/GPS segment injected right after the SOI marker.
+     */
+    public function jpegWithExif(int $width, int $height, string $name = 'exif.jpg'): string
+    {
+        $path = $this->jpeg($width, $height, $name);
+        $raw = (string) file_get_contents($path);
+        $payload = "Exif\x00\x00II*\x00\x08\x00\x00\x00\x00\x00\x00\x00GPSLatitude";
+        $app1 = "\xFF\xE1" . pack('n', strlen($payload) + 2) . $payload;
+        file_put_contents($path, substr($raw, 0, 2) . $app1 . substr($raw, 2));
+
+        return $path;
+    }
+
     public function png(int $width, int $height, string $name = 'image.png'): string
     {
         $path = $this->path($name);

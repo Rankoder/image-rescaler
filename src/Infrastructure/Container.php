@@ -23,6 +23,7 @@ use App\Infrastructure\Controllers\ImageController;
 use App\Infrastructure\Controllers\ImagesController;
 use App\Infrastructure\Controllers\NotFoundController;
 use App\Infrastructure\Http\JsonResponses;
+use App\Infrastructure\Image\InterventionImageReencoder;
 use App\Infrastructure\Image\InterventionImageResizer;
 use App\Infrastructure\Image\LocalImageInspector;
 use App\Infrastructure\Logging\ErrorLogLogger;
@@ -89,7 +90,12 @@ final readonly class Container
     public function imagesController(): ImagesController
     {
         return new ImagesController(
-            new InputImages($this->inputDirectory(), $this->imageFileRules(), new NameRule()),
+            new InputImages(
+                $this->inputDirectory(),
+                $this->imageFileRules(),
+                new NameRule(),
+                new InterventionImageReencoder(new ImageManager(new GdDriver()), $this->config->temporaryDirectory),
+            ),
             $this->jsonResponses(),
             $this->config->postMaxSize,
             $this->logger(),
