@@ -15,6 +15,7 @@ use App\Application\Validation\SourceFile;
 use App\Application\Validation\ValidationError;
 use App\Application\Validation\ValidationFailed;
 use App\Domain\Enums\ImageFormat;
+use App\Domain\Enums\ImageAddOutcome;
 use App\Domain\Enums\StorageType;
 use App\Domain\Interfaces\ImageInspector;
 use App\Domain\Interfaces\ImageLibrary;
@@ -237,9 +238,9 @@ final class ResizeRequestValidatorTest extends TestCase
                 return $this->images[$name] ?? null;
             }
 
-            public function addIfAbsent(string $sourcePath, string $name): bool
+            public function addWithinLimit(string $sourcePath, string $name, int $limit): ImageAddOutcome
             {
-                return false;
+                return ImageAddOutcome::Added;
             }
         });
     }

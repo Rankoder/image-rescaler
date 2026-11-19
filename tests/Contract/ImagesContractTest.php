@@ -109,6 +109,31 @@ final class ImagesContractTest extends TestCase
         $this->assertSame($original, file_get_contents($this->input->directory() . '/landscape.jpg'));
     }
 
+    #[RunInSeparateProcess]
+    public function testRejectsAnAdditionWhenTheInputDirectoryHoldsTenImages(): void
+    {
+        for ($i = 3; $i <= 10; $i++) {
+            $this->input->jpeg(100, 100, "extra_{$i}.jpg");
+        }
+
+        $response = $this->addImage($this->files->jpeg(100, 100, 'eleventh.jpg'), 'eleventh.jpg', ['name' => 'eleventh']);
+
+        $this->assertErrors(422, [[null, 'limit_reached']], 'post', '/images', $response);
+        $this->assertCount(10, $this->listing());
+    }
+
+    #[RunInSeparateProcess]
+    public function testLimitReachedComesTogetherWithFieldErrors(): void
+    {
+        for ($i = 3; $i <= 10; $i++) {
+            $this->input->jpeg(100, 100, "extra_{$i}.jpg");
+        }
+
+        $response = $this->addImage($this->files->jpeg(100, 100, 'eleventh.jpg'), 'eleventh.jpg', ['name' => '../bad']);
+
+        $this->assertErrors(422, [[null, 'limit_reached'], ['name', 'invalid_characters']], 'post', '/images', $response);
+    }
+
     /**
      * @return iterable<string, array{string, string, array<string, string>, list<array{string, string}>}>
      */

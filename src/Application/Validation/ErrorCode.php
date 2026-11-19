@@ -22,4 +22,5 @@ enum ErrorCode: string
     case OutsideInputDirectory = 'outside_input_directory';
     case ConflictsWithFile = 'conflicts_with_file';
     case AlreadyExists = 'already_exists';
+    case LimitReached = 'limit_reached';
 }

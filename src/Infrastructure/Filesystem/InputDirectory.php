@@ -7,7 +7,9 @@ namespace App\Infrastructure\Filesystem;
 use App\Application\Validation\ErrorCode;
 use App\Application\Validation\Field;
 use App\Application\Validation\SourceFile;
+use App\Domain\Enums\ImageAddOutcome;
 use App\Domain\Interfaces\ImageLibrary;
+use RuntimeException;
 
 /**
  * The input directory: where the CLI and GET/POST /images read and add images. A name that resolves outside it is rejected.
@@ -23,6 +25,10 @@ final readonly class InputDirectory implements ImageLibrary
 
     public function names(): array
     {
+        if (!is_dir($this->path)) {
+            return [];
+        }
+
         $names = array_values(array_filter(
             scandir($this->path) ?: [],
             fn(string $name): bool => self::isImageName($name) && is_file($this->path . '/' . $name),
@@ -41,7 +47,41 @@ final readonly class InputDirectory implements ImageLibrary
 
     public function addIfAbsent(string $sourcePath, string $name): bool
     {
-        return $this->copy->create($sourcePath, $this->path, $name);
+        return $this->addWithOptionalLimit($sourcePath, $name, null) === ImageAddOutcome::Added;
+    }
+
+    public function addWithinLimit(string $sourcePath, string $name, int $limit): ImageAddOutcome
+    {
+        return $this->addWithOptionalLimit($sourcePath, $name, $limit);
+    }
+
+    private function addWithOptionalLimit(string $sourcePath, string $name, ?int $limit): ImageAddOutcome
+    {
+        if (!is_dir($this->path) && !mkdir($this->path, 0777, true) && !is_dir($this->path)) {
+            throw new RuntimeException(sprintf('Directory "%s" was not created', $this->path));
+        }
+
+        $lock = fopen($this->path . '/.lock', 'c');
+        if ($lock === false) {
+            throw new RuntimeException(sprintf('Cannot open lock file in "%s"', $this->path));
+        }
+
+        try {
+            if (!flock($lock, LOCK_EX)) {
+                throw new RuntimeException(sprintf('Cannot lock directory "%s"', $this->path));
+            }
+
+            if ($limit !== null && count($this->names()) >= $limit) {
+                return ImageAddOutcome::LimitReached;
+            }
+
+            return $this->copy->create($sourcePath, $this->path, $name)
+                ? ImageAddOutcome::Added
+                : ImageAddOutcome::AlreadyExists;
+        } finally {
+            flock($lock, LOCK_UN);
+            fclose($lock);
+        }
     }
 
     public static function isImageName(string $name): bool

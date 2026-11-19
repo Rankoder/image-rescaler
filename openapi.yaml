@@ -130,9 +130,10 @@ paths:
     post:
       summary: Adds an image to the input directory
       description: |
-        The file follows the same rules as in `POST /upload`, except the frame. It is stored under
-        `name` (or the file's own name, reduced to safe characters) with the extension of its type;
-        an existing image is never replaced.
+        The file follows the same rules as in `POST /upload`, except the frame. It is re-encoded in its own
+        format to strip embedded metadata and stored under `name` (or the file's own name, reduced to safe
+        characters) with the extension of its type; an existing image is never replaced. The input directory
+        holds at most 10 images (including the sample ones).
       requestBody:
         required: true
         content:
@@ -270,6 +271,7 @@ components:
             - not_found
             - conflicts_with_file
             - already_exists
+            - limit_reached
           description: |
             - `malformed_request`: the request is not `multipart/form-data` (400, `field` is `null`)
             - `required`: the field is missing
@@ -287,6 +289,7 @@ components:
             - `not_found`: `image` names no image in the input directory
             - `conflicts_with_file`: both `file` and `image` are given
             - `already_exists`: an image of that `name` is in the input directory already
+            - `limit_reached`: the input directory already holds 10 images (`field` is `null`)
             - `required` for `file` in `POST /upload`: neither `file` nor `image` is given
         message:
           type: string

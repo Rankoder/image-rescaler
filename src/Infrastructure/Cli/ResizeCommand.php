@@ -61,7 +61,7 @@ final readonly class ResizeCommand
         return $name === null || $name === '' ? null : $this->inputDirectory->sourceFile($name);
     }
 
-    private function option(Field $field): string
+    private function option(?Field $field): string
     {
         return match ($field) {
             Field::File, Field::Image => '-f',
@@ -69,6 +69,7 @@ final readonly class ResizeCommand
             Field::MaxHeight => '-h',
             Field::Service => '-s',
             Field::OutputFilename, Field::Name => '-o',
+            null => 'request',
         };
     }
 }

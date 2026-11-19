@@ -11,6 +11,7 @@ use App\Application\Validation\NameRule;
 use App\Application\Validation\SourceFile;
 use App\Application\Validation\ValidationError;
 use App\Application\Validation\ValidationFailed;
+use App\Domain\Enums\ImageAddOutcome;
 use App\Domain\Interfaces\ImageLibrary;
 use App\Domain\Interfaces\ImageReencoder;
 
@@ -19,6 +20,8 @@ use App\Domain\Interfaces\ImageReencoder;
  */
 final readonly class InputImages
 {
+    private const int MAX_IMAGES = 10;
+
     public function __construct(
         private ImageLibrary $library,
         private ImageFileRules $fileRules,
@@ -40,12 +43,19 @@ final readonly class InputImages
      */
     public function add(?SourceFile $file, ?string $name): string
     {
+        $limit = count($this->library->names()) >= self::MAX_IMAGES
+            ? new ValidationError(
+                null,
+                ErrorCode::LimitReached,
+                sprintf('The input directory already holds %d images.', self::MAX_IMAGES),
+            )
+            : null;
         $source = $this->fileRules->check($file);
         $chosenName = $this->names->check(Field::Name, $name);
 
-        if ($source instanceof ValidationError || $chosenName instanceof ValidationError) {
+        if ($limit !== null || $source instanceof ValidationError || $chosenName instanceof ValidationError) {
             throw new ValidationFailed(array_values(array_filter(
-                [$source, $chosenName],
+                [$limit, $source, $chosenName],
                 static fn(mixed $result): bool => $result instanceof ValidationError,
             )));
         }
@@ -56,17 +66,27 @@ final readonly class InputImages
 
         $reencodedPath = $this->reencoder->reencode($sourceFile->path, $format);
         try {
-            if (!$this->library->addIfAbsent($reencodedPath, $filename)) {
-                throw new ValidationFailed([new ValidationError(
-                    Field::Name,
-                    ErrorCode::AlreadyExists,
-                    sprintf('An image named %s is in the input directory already.', $filename),
-                )]);
-            }
+            $outcome = $this->library->addWithinLimit($reencodedPath, $filename, self::MAX_IMAGES);
         } finally {
             if (is_file($reencodedPath)) {
                 unlink($reencodedPath);
             }
+        }
+
+        if ($outcome === ImageAddOutcome::AlreadyExists) {
+            throw new ValidationFailed([new ValidationError(
+                Field::Name,
+                ErrorCode::AlreadyExists,
+                sprintf('An image named %s is in the input directory already.', $filename),
+            )]);
+        }
+
+        if ($outcome === ImageAddOutcome::LimitReached) {
+            throw new ValidationFailed([new ValidationError(
+                null,
+                ErrorCode::LimitReached,
+                sprintf('The input directory already holds %d images.', self::MAX_IMAGES),
+            )]);
         }
 
         return $filename;

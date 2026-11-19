@@ -38,7 +38,7 @@ final readonly class JsonResponses
             'status' => 'error',
             'errors' => array_map(
                 static fn(ValidationError $error): array => [
-                    'field' => $error->field->value,
+                    'field' => $error->field?->value,
                     'code' => $error->code->value,
                     'message' => $error->message,
                 ],
