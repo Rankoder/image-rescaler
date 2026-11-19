@@ -99,6 +99,69 @@ POST {{baseUrl}}/upload
     });
 %}
 
+### List the images in the input directory
+GET {{baseUrl}}/images
+
+> {%
+    client.test("200 with the sample images", () => {
+        client.assert(response.status === 200);
+        client.assert(response.body.images.includes("landscape.jpg"));
+    });
+%}
+
+### Crop a sample image from the input directory
+POST {{baseUrl}}/upload
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="image"
+
+landscape.jpg
+--boundary
+Content-Disposition: form-data; name="max_width"
+
+200
+--boundary
+Content-Disposition: form-data; name="max_height"
+
+150
+--boundary
+Content-Disposition: form-data; name="output_filename"
+
+http_client_sample
+--boundary--
+
+> {%
+    client.test("200 with the stored path", () => {
+        client.assert(response.status === 200);
+        client.assert(response.body.path.startsWith("http_client_sample_v"));
+    });
+%}
+
+### Add the test image to the input directory
+POST {{baseUrl}}/images
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="test_image.jpg"
+Content-Type: image/jpeg
+
+< ../tests/fixtures/test_image.jpg
+--boundary
+Content-Disposition: form-data; name="name"
+
+http_client_added
+--boundary--
+
+> {%
+    client.test("201 on the first run, 422 already_exists on the next ones", () => {
+        client.assert(response.status === 201 || response.status === 422);
+        if (response.status === 422) {
+            client.assert(response.body.errors[0].code === "already_exists");
+        }
+    });
+%}
+
 ### Unknown route
 GET {{baseUrl}}/nope
 

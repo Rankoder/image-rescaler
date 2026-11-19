@@ -50,7 +50,7 @@ docker compose -f compose.prod.yaml up --build -d
 docker compose -f compose.prod.yaml ps      # STATUS shows (healthy)
 ```
 
-It publishes the same host port as the development container, `APP_PORT` from `.env`, so stop that one first (`docker compose stop`). Settings come from the same `.env`; files stored with the `local` service live in the `storage` volume.
+It publishes the same host port as the development container, `APP_PORT` from `.env`, so stop that one first (`docker compose stop`). Settings come from the same `.env`; files stored with the `local` service and the input directory live in the `storage` volume, which starts with the sample images when it is created.
 
 ## Configuration
 
@@ -88,7 +88,8 @@ Tells whether the application is up; meant for container health checks and monit
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `file` | yes | JPEG, PNG or WebP, at most 5 MB and 5000 × 5000 px; the type is read from the content and the extension must match it |
+| `file` | `file` or `image` | JPEG, PNG or WebP, at most 5 MB and 5000 × 5000 px; the type is read from the content and the extension must match it |
+| `image` | `file` or `image` | name of an image in the input directory (see `GET /images`) instead of sending a file; the same rules apply |
 | `max_width` | yes | width of the frame, 40–5000 px |
 | `max_height` | yes | height of the frame, 40–5000 px |
 | `service` | no | `local` (default), `s3` or `dropbox` |
@@ -124,6 +125,30 @@ The codes are listed in [openapi.yaml](openapi.yaml). Processing and storage fai
 
 `url` points to the stored file: for `local` it is served by `GET /files/{name}` below, for `s3` it is the object's URL, for `dropbox` a shared link.
 
+### `GET /images`
+
+Lists the images in the input directory, `storage/input/`: the samples shipped in `resources/images/` (put there when the container starts, without replacing a file of the same name) and the ones added with `POST /images`.
+
+```sh
+curl http://localhost:8080/images
+# {"images":["landscape.jpg","portrait.png","square.webp"]}
+```
+
+Crop one of them by its name instead of sending a file:
+
+```sh
+curl -X POST http://localhost:8080/upload -F "image=landscape.jpg" -F "max_width=200" -F "max_height=150"
+```
+
+### `POST /images`
+
+Adds an image to the input directory. `file` follows the same rules as in `POST /upload`, without the frame; the optional `name` (letters, digits, `-` and `_`, up to 100 characters) sets its name, otherwise the file's own name reduced to those characters is used, and the extension comes from the type. A name that is taken is `422` `already_exists`: nothing is replaced.
+
+```sh
+curl -X POST http://localhost:8080/images -F "file=@/path/to/photo.jpg" -F "name=holiday"
+# {"status":"success","name":"holiday.jpg"}   (201)
+```
+
 ### `GET /files/{name}`
 
 Serves an image stored with the `local` service, under the name `POST /upload` returned:
@@ -138,12 +163,13 @@ To send these requests from PhpStorm, with ready examples and checks of the resp
 
 ## CLI
 
-The CLI reads images only from the input directory, `storage/input/` (`INPUT_DIR` overrides it), and goes through the same validation and processing as the API:
+The CLI reads images only from the input directory, `storage/input/` (`INPUT_DIR` overrides it), the same one `GET /images` lists, and goes through the same validation and processing as the API:
 
 ```sh
 cp photo.jpg storage/input/
 docker compose exec web bin/resize -f photo.jpg -w 200 -h 150 -o thumbnail
 # Stored thumbnail_v1.jpg
+docker compose exec web bin/resize -f landscape.jpg -w 200 -h 150   # a sample image
 ```
 
 | Option | Description |
@@ -197,6 +223,7 @@ src/
 public/index.php           HTTP entry point → routes.php → controllers (bramus/router)
 bin/resize                 CLI entry point
 openapi.yaml               API contract
+resources/images/          sample images, copied into storage/input on start
 docker/entrypoint.sh       dev container start: dependencies, storage and input dirs, Apache
 docker/php.ini             PHP settings: errors to the log, not to responses
 docker/xdebug.ini          Xdebug settings, dev image only
