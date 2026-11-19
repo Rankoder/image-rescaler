@@ -6,6 +6,7 @@ namespace App\Application\Validation;
 
 /**
  * Raw input of a resize, as HTTP or the CLI received it; null means the field was not given.
+ * The source is either a file or the name of an image in the input directory.
  */
 final readonly class ResizeInput
 {
@@ -15,5 +16,6 @@ final readonly class ResizeInput
         public ?string $maxHeight,
         public ?string $service = null,
         public ?string $outputFilename = null,
+        public ?string $image = null,
     ) {}
 }

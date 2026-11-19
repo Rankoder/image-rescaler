@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Validation;
 
 use App\Domain\Enums\StorageType;
+use App\Domain\Interfaces\ImageLibrary;
 
 /**
  * The one validation of a resize for every entry point; reports all invalid fields at once.
@@ -13,10 +14,12 @@ final readonly class ResizeRequestValidator
 {
     private const int MIN_FRAME_SIDE = 40;
     private const int MAX_FRAME_SIDE = 5000;
+    private const string IMAGE_NAME = '/^[A-Za-z0-9_-]{1,100}\.(jpg|jpeg|png|webp)\z/';
 
     public function __construct(
         private ImageFileRules $fileRules,
         private NameRule $names,
+        private ImageLibrary $library,
     ) {}
 
     /**
@@ -26,7 +29,10 @@ final readonly class ResizeRequestValidator
     {
         $width = $this->frameSide(Field::MaxWidth, $input->maxWidth);
         $height = $this->frameSide(Field::MaxHeight, $input->maxHeight);
-        $source = $this->fileRules->check($input->file, is_int($width) ? $width : null, is_int($height) ? $height : null);
+        $source = $this->sourceOf($input);
+        if (!$source instanceof ValidationError) {
+            $source = $this->fileRules->check($source, is_int($width) ? $width : null, is_int($height) ? $height : null);
+        }
         $storage = $this->storage($input->service);
         $outputFilename = $this->names->check(Field::OutputFilename, $input->outputFilename);
 
@@ -47,6 +53,24 @@ final readonly class ResizeRequestValidator
         [$file, $format] = $source;
 
         return new ResizeRequest($file->path, $file->name, $format, $width, $height, $storage, $outputFilename);
+    }
+
+    private function sourceOf(ResizeInput $input): SourceFile|ValidationError|null
+    {
+        $image = $input->image === '' ? null : $input->image;
+        if ($image === null) {
+            return $input->file;
+        }
+        if ($input->file !== null) {
+            return new ValidationError(Field::Image, ErrorCode::ConflictsWithFile, 'Give either file or image, not both.');
+        }
+
+        // Only a plain image name counts; ../, absolute paths and hidden files are simply not found
+        $path = preg_match(self::IMAGE_NAME, $image) === 1 ? $this->library->path($image) : null;
+
+        return $path === null
+            ? SourceFile::rejected(ErrorCode::NotFound, $image, Field::Image)
+            : SourceFile::at($path, $image, Field::Image);
     }
 
     private function frameSide(Field $field, ?string $value): int|ValidationError

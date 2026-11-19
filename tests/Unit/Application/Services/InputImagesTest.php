@@ -108,6 +108,11 @@ final class InputImagesTest extends TestCase
                 return array_keys($this->stored);
             }
 
+            public function path(string $name): ?string
+            {
+                return $this->stored[$name] ?? null;
+            }
+
             public function addIfAbsent(string $sourcePath, string $name): bool
             {
                 if (isset($this->stored[$name])) {

@@ -5,13 +5,8 @@ declare(strict_types=1);
 namespace App\Infrastructure\Controllers;
 
 use App\Application\Services\ResizeAndStoreImage;
-use App\Application\Validation\ErrorCode;
-use App\Application\Validation\Field;
 use App\Application\Validation\ResizeInput;
-use App\Application\Validation\SourceFile;
-use App\Application\Validation\ValidationError;
 use App\Application\Validation\ValidationFailed;
-use App\Infrastructure\Filesystem\InputDirectory;
 use App\Infrastructure\Http\JsonResponses;
 use App\Infrastructure\Http\MultipartRequest;
 use Psr\Http\Message\ResponseInterface;
@@ -24,7 +19,6 @@ final readonly class ImageController
     public function __construct(
         private ResizeAndStoreImage $resizeAndStoreImage,
         private JsonResponses $responses,
-        private InputDirectory $inputDirectory,
         private int $postMaxSize,
         private LoggerInterface $logger,
     ) {}
@@ -37,21 +31,14 @@ final readonly class ImageController
             return $unreadable;
         }
 
-        $image = $form->field('image');
-        $image = $image === '' ? null : $image;
-        if ($image !== null && $form->hasFile()) {
-            return $this->responses->validationFailed([
-                new ValidationError(Field::Image, ErrorCode::ConflictsWithFile, 'Give either file or image, not both.'),
-            ]);
-        }
-
         try {
             $stored = $this->resizeAndStoreImage->handle(new ResizeInput(
-                $image === null ? $form->file() : $this->imageFromInputDirectory($image),
+                $form->file(),
                 $form->field('max_width'),
                 $form->field('max_height'),
                 $form->field('service'),
                 $form->field('output_filename'),
+                $form->field('image'),
             ));
 
             return $this->responses->json(200, ['status' => 'success', 'path' => $stored->path, 'url' => $stored->url]);
@@ -63,15 +50,5 @@ final readonly class ImageController
 
             return $this->responses->serverError();
         }
-    }
-
-    // Over HTTP every name that is not a plain image in the directory is simply not found, ../ and hidden files included
-    private function imageFromInputDirectory(string $name): SourceFile
-    {
-        $source = InputDirectory::isImageName($name) ? $this->inputDirectory->sourceFile($name, Field::Image) : null;
-
-        return $source === null || $source->problem !== null
-            ? SourceFile::rejected(ErrorCode::NotFound, $name, Field::Image)
-            : $source;
     }
 }

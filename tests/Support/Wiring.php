@@ -36,7 +36,7 @@ final class Wiring
         ?StorageRegistry $storages = null,
     ): ResizeAndStoreImage {
         return new ResizeAndStoreImage(
-            new ResizeRequestValidator(self::container()->imageFileRules(), new NameRule()),
+            new ResizeRequestValidator(self::container()->imageFileRules(), new NameRule(), self::container()->inputDirectory()),
             new OutputFilename(),
             $resizer ?? self::container()->imageResizer(),
             $storages ?? self::container()->storageRegistry(),
@@ -52,7 +52,6 @@ final class Wiring
         return new ImageController(
             $resizeAndStoreImage ?? $container->resizeAndStoreImage(),
             $container->jsonResponses(),
-            $container->inputDirectory(),
             self::config()->postMaxSize,
             $logger,
         );

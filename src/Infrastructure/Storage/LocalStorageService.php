@@ -11,7 +11,7 @@ final class LocalStorageService extends AbstractStorageService
     public function __construct(
         private readonly string $directory,
         private readonly string $publicBaseUrl,
-        private readonly ExclusiveCopy $copy = new ExclusiveCopy(),
+        private readonly ExclusiveCopy $copy,
     ) {}
 
     public function getPublicUrl(string $filePath): string

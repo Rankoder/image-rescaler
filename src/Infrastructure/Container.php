@@ -13,6 +13,7 @@ use App\Application\Validation\ResizeRequestValidator;
 use App\Domain\Enums\StorageType;
 use App\Domain\Interfaces\ImageResizer;
 use App\Domain\Interfaces\StorageRegistry;
+use App\Infrastructure\Filesystem\ExclusiveCopy;
 use App\Infrastructure\Filesystem\InputDirectory;
 use App\Infrastructure\Cli\ResizeCommand;
 use App\Infrastructure\Config\AppConfig;
@@ -80,7 +81,6 @@ final readonly class Container
         return new ImageController(
             $this->resizeAndStoreImage(),
             $this->jsonResponses(),
-            $this->inputDirectory(),
             $this->config->postMaxSize,
             $this->logger(),
         );
@@ -103,7 +103,7 @@ final readonly class Container
 
     public function inputDirectory(): InputDirectory
     {
-        return new InputDirectory($this->config->inputDirectory);
+        return new InputDirectory($this->config->inputDirectory, new ExclusiveCopy());
     }
 
     public function logger(): LoggerInterface
@@ -119,7 +119,7 @@ final readonly class Container
     public function resizeAndStoreImage(): ResizeAndStoreImage
     {
         return new ResizeAndStoreImage(
-            new ResizeRequestValidator($this->imageFileRules(), new NameRule()),
+            new ResizeRequestValidator($this->imageFileRules(), new NameRule(), $this->inputDirectory()),
             new OutputFilename(),
             $this->imageResizer(),
             $this->storageRegistry(),
@@ -144,6 +144,7 @@ final readonly class Container
             StorageType::Local->value => static fn(): LocalStorageService => new LocalStorageService(
                 $config->storageDirectory,
                 $config->publicBaseUrl,
+                new ExclusiveCopy(),
             ),
             StorageType::S3->value => static fn(): S3StorageService => new S3StorageService(
                 new S3Client([
