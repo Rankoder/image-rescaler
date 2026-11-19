@@ -63,7 +63,7 @@ All settings come from `.env`: Compose passes them to the container as environme
 | `AWS_REGION` | S3 region, e.g. `eu-central-1` |
 | `AWS_BUCKET_NAME` | target bucket |
 | `DROPBOX_ACCESS_TOKEN` | Dropbox API token; the app needs the `files.content.write`, `files.metadata.read` and `sharing.write` scopes, the last one for the returned link |
-| `DROPBOX_DIRECTORY` | Dropbox folder the images go to, `/Aplikacje/image-rescaler` by default |
+| `DROPBOX_DIRECTORY` | Dropbox folder the images go to, `/Aplikacje/image-rescaler` by default; it must start with `/`, otherwise the app refuses to start (`/health` answers `500`, the log says why) |
 | `INPUT_DIR` | directory inside the container the CLI reads images from, `storage/input` when empty |
 
 The limits of the API (types, size, dimensions) are fixed by the contract, not by configuration. Only the variables of the storage you use need real values.

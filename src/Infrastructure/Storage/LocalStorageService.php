@@ -18,22 +18,36 @@ final class LocalStorageService extends AbstractStorageService
         return $this->publicBaseUrl . '/files/' . $filePath;
     }
 
-    protected function store(string $sourcePath, string $destinationFilename): void
+    protected function createIfAbsent(string $sourcePath, string $destinationFilename): bool
     {
-        if (!file_exists($sourcePath)) {
+        if (!is_file($sourcePath)) {
             throw new RuntimeException("File not found at path: {$sourcePath}");
         }
 
         $this->ensureDirectoryExists();
         $destinationPath = $this->directory . '/' . $destinationFilename;
-        if (!copy($sourcePath, $destinationPath)) {
-            throw new RuntimeException("Failed to copy file from {$sourcePath} to {$destinationPath}");
-        }
-    }
+        // Written in full under a hidden name first, so GET /files never sees a partly copied image
+        $partialPath = sprintf('%s/.%s-%s', $this->directory, bin2hex(random_bytes(8)), $destinationFilename);
 
-    protected function fileExists(string $filename): bool
-    {
-        return file_exists($this->directory . '/' . $filename);
+        try {
+            if (!copy($sourcePath, $partialPath)) {
+                throw new RuntimeException("Failed to copy file from {$sourcePath} to {$partialPath}");
+            }
+
+            // link() creates the name in one step and fails if it exists, so two uploads never share it
+            if (@link($partialPath, $destinationPath)) {
+                return true;
+            }
+            if (file_exists($destinationPath)) {
+                return false;
+            }
+
+            throw new RuntimeException("Cannot create {$destinationPath}");
+        } finally {
+            if (file_exists($partialPath)) {
+                unlink($partialPath);
+            }
+        }
     }
 
     private function ensureDirectoryExists(): void

@@ -7,7 +7,6 @@ namespace App\Infrastructure\Storage;
 use Kunnu\Dropbox\Dropbox;
 use Kunnu\Dropbox\DropboxFile;
 use Kunnu\Dropbox\Exceptions\DropboxClientException;
-use Kunnu\Dropbox\Models\FileMetadata;
 use RuntimeException;
 
 final class DropboxStorageService extends AbstractStorageService
@@ -25,7 +24,11 @@ final class DropboxStorageService extends AbstractStorageService
             $link = $this->dropbox->postToAPI('/sharing/create_shared_link_with_settings', ['path' => $path])->getDecodedBody();
         } catch (DropboxClientException $e) {
             if (!str_contains($e->getMessage(), 'shared_link_already_exists')) {
-                throw new RuntimeException('Creating a Dropbox link failed: ' . $e->getMessage(), 0, $e);
+                throw new RuntimeException(sprintf(
+                    '%s is stored on Dropbox, but no shared link could be created; the token needs the sharing.write scope. Dropbox said: %s',
+                    $path,
+                    $e->getMessage(),
+                ), 0, $e);
             }
 
             $links = $this->dropbox->postToAPI('/sharing/list_shared_links', ['path' => $path, 'direct_only' => true])->getDecodedBody();
@@ -39,31 +42,24 @@ final class DropboxStorageService extends AbstractStorageService
         return $link['url'];
     }
 
-    protected function store(string $sourcePath, string $destinationFilename): void
+    protected function createIfAbsent(string $sourcePath, string $destinationFilename): bool
     {
         try {
-            $this->dropbox->upload(new DropboxFile($sourcePath), $this->path($destinationFilename), ['autorename' => true]);
-        } catch (DropboxClientException $e) {
-            throw new RuntimeException('File upload to Dropbox failed: ' . $e->getMessage(), 0, $e);
-        }
-    }
+            // In "add" mode without autorename Dropbox refuses a taken path with a conflict instead of renaming
+            $this->dropbox->upload(new DropboxFile($sourcePath), $this->path($destinationFilename), ['mode' => 'add', 'autorename' => false]);
 
-    protected function fileExists(string $filename): bool
-    {
-        try {
-            return $this->dropbox->getMetadata($this->path($filename)) instanceof FileMetadata;
+            return true;
         } catch (DropboxClientException $e) {
-            // Only "not found" means the name is free; an auth or network error must not pass for it
-            if (str_contains($e->getMessage(), 'not_found')) {
+            if (str_contains($e->getMessage(), 'conflict')) {
                 return false;
             }
 
-            throw new RuntimeException('Checking a file on Dropbox failed: ' . $e->getMessage(), 0, $e);
+            throw new RuntimeException('File upload to Dropbox failed: ' . $e->getMessage(), 0, $e);
         }
     }
 
     private function path(string $filename): string
     {
-        return $this->directory . '/' . $filename;
+        return rtrim($this->directory, '/') . '/' . $filename;
     }
 }
