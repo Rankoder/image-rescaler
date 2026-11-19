@@ -26,9 +26,6 @@ final class InterventionImageResizerTest extends TestCase
     protected function tearDown(): void
     {
         $this->files->remove();
-        foreach (glob(sys_get_temp_dir() . '/' . $this->outputFilename . '*') ?: [] as $path) {
-            unlink($path);
-        }
     }
 
     /**
@@ -85,7 +82,7 @@ final class InterventionImageResizerTest extends TestCase
     private function resize(string $source, ImageFormat $format, int $width, int $height): string
     {
         $filename = $this->outputFilename . '.' . $format->extension();
-        $resizer = new InterventionImageResizer(new ImageManager(new GdDriver()), sys_get_temp_dir());
+        $resizer = new InterventionImageResizer(new ImageManager(new GdDriver()), $this->files->directory());
 
         $result = $resizer->cover($source, $width, $height, $filename);
 
