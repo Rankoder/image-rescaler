@@ -20,36 +20,33 @@ final class LocalStorageService extends AbstractStorageService
 
     protected function createIfAbsent(string $sourcePath, string $destinationFilename): bool
     {
-        $source = @fopen($sourcePath, 'r');
-        if ($source === false) {
+        if (!is_file($sourcePath)) {
             throw new RuntimeException("File not found at path: {$sourcePath}");
         }
 
+        $this->ensureDirectoryExists();
+        $destinationPath = $this->directory . '/' . $destinationFilename;
+        // Written in full under a hidden name first, so GET /files never sees a partly copied image
+        $partialPath = sprintf('%s/.%s-%s', $this->directory, bin2hex(random_bytes(8)), $destinationFilename);
+
         try {
-            $this->ensureDirectoryExists();
-            $destinationPath = $this->directory . '/' . $destinationFilename;
-
-            // 'x' creates the file only if it does not exist yet, in one step
-            $destination = @fopen($destinationPath, 'x');
-            if ($destination === false) {
-                if (file_exists($destinationPath)) {
-                    return false;
-                }
-
-                throw new RuntimeException("Cannot create {$destinationPath}");
+            if (!copy($sourcePath, $partialPath)) {
+                throw new RuntimeException("Failed to copy file from {$sourcePath} to {$partialPath}");
             }
 
-            $copied = stream_copy_to_stream($source, $destination);
-            fclose($destination);
-            if ($copied === false) {
-                unlink($destinationPath);
-
-                throw new RuntimeException("Failed to copy file from {$sourcePath} to {$destinationPath}");
+            // link() creates the name in one step and fails if it exists, so two uploads never share it
+            if (@link($partialPath, $destinationPath)) {
+                return true;
+            }
+            if (file_exists($destinationPath)) {
+                return false;
             }
 
-            return true;
+            throw new RuntimeException("Cannot create {$destinationPath}");
         } finally {
-            fclose($source);
+            if (file_exists($partialPath)) {
+                unlink($partialPath);
+            }
         }
     }
 
