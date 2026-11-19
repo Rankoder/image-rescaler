@@ -9,6 +9,7 @@ use App\Application\Validation\Field;
 use App\Application\Validation\ResizeInput;
 use App\Application\Validation\SourceFile;
 use App\Application\Validation\ValidationFailed;
+use App\Infrastructure\Filesystem\InputDirectory;
 use Exception;
 
 final readonly class ResizeCommand

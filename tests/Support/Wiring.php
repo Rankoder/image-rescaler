@@ -47,12 +47,12 @@ final class Wiring
         ?ResizeAndStoreImage $resizeAndStoreImage = null,
         LoggerInterface $logger = new NullLogger(),
     ): ImageController {
-        $factory = self::container()->httpFactory();
+        $container = self::container();
 
         return new ImageController(
-            $resizeAndStoreImage ?? self::container()->resizeAndStoreImage(),
-            $factory,
-            $factory,
+            $resizeAndStoreImage ?? $container->resizeAndStoreImage(),
+            $container->jsonResponses(),
+            $container->inputDirectory(),
             self::config()->postMaxSize,
             $logger,
         );

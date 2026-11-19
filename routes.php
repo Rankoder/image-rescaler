@@ -34,6 +34,17 @@ $router->post('/upload', function () use ($container, $emit) {
     $emit($container->imageController()->upload($request));
 });
 
+$router->get('/images', function () use ($container, $emit) {
+    $emit($container->imagesController()->list());
+});
+
+$router->post('/images', function () use ($container, $emit) {
+    $factory = $container->httpFactory();
+    $request = (new ServerRequestCreator($factory, $factory, $factory, $factory))->fromGlobals();
+
+    $emit($container->imagesController()->add($request));
+});
+
 $router->get('/files/([^/]+)', function (string $name) use ($container, $emit) {
     $emit($container->fileController()->show($name));
 });

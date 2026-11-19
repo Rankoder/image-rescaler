@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure;
 
+use App\Application\Services\InputImages;
 use App\Application\Services\OutputFilename;
 use App\Application\Services\ResizeAndStoreImage;
 use App\Application\Validation\ImageFileRules;
@@ -12,13 +13,15 @@ use App\Application\Validation\ResizeRequestValidator;
 use App\Domain\Enums\StorageType;
 use App\Domain\Interfaces\ImageResizer;
 use App\Domain\Interfaces\StorageRegistry;
-use App\Infrastructure\Cli\InputDirectory;
+use App\Infrastructure\Filesystem\InputDirectory;
 use App\Infrastructure\Cli\ResizeCommand;
 use App\Infrastructure\Config\AppConfig;
 use App\Infrastructure\Controllers\FileController;
 use App\Infrastructure\Controllers\HealthController;
 use App\Infrastructure\Controllers\ImageController;
+use App\Infrastructure\Controllers\ImagesController;
 use App\Infrastructure\Controllers\NotFoundController;
+use App\Infrastructure\Http\JsonResponses;
 use App\Infrastructure\Image\InterventionImageResizer;
 use App\Infrastructure\Image\LocalImageInspector;
 use App\Infrastructure\Logging\ErrorLogLogger;
@@ -76,11 +79,31 @@ final readonly class Container
     {
         return new ImageController(
             $this->resizeAndStoreImage(),
-            $this->httpFactory,
-            $this->httpFactory,
+            $this->jsonResponses(),
+            $this->inputDirectory(),
             $this->config->postMaxSize,
             $this->logger(),
         );
+    }
+
+    public function imagesController(): ImagesController
+    {
+        return new ImagesController(
+            new InputImages($this->inputDirectory(), $this->imageFileRules(), new NameRule()),
+            $this->jsonResponses(),
+            $this->config->postMaxSize,
+            $this->logger(),
+        );
+    }
+
+    public function jsonResponses(): JsonResponses
+    {
+        return new JsonResponses($this->httpFactory, $this->httpFactory);
+    }
+
+    public function inputDirectory(): InputDirectory
+    {
+        return new InputDirectory($this->config->inputDirectory);
     }
 
     public function logger(): LoggerInterface
@@ -90,7 +113,7 @@ final readonly class Container
 
     public function resizeCommand(): ResizeCommand
     {
-        return new ResizeCommand($this->resizeAndStoreImage(), new InputDirectory($this->config->inputDirectory));
+        return new ResizeCommand($this->resizeAndStoreImage(), $this->inputDirectory());
     }
 
     public function resizeAndStoreImage(): ResizeAndStoreImage

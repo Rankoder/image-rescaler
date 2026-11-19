@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Tests\Functional\Infrastructure\Cli;
+namespace Tests\Functional\Infrastructure\Filesystem;
 
 use App\Application\Validation\ErrorCode;
 use App\Application\Validation\SourceFile;
-use App\Infrastructure\Cli\InputDirectory;
+use App\Infrastructure\Filesystem\InputDirectory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Tests\Support\TestFiles;
@@ -80,5 +80,30 @@ final class InputDirectoryTest extends TestCase
     public function testNothingIsFoundWhenTheDirectoryDoesNotExist(): void
     {
         $this->assertSame(ErrorCode::NotFound, (new InputDirectory($this->input->directory() . '/missing'))->sourceFile('photo.jpg')->problem);
+    }
+
+    public function testListsOnlyPlainImageNamesSorted(): void
+    {
+        $this->input->png(10, 10, 'b.png');
+        $this->input->jpeg(10, 10, 'a.jpg');
+        $this->input->withContent('partial', '.0123-c.jpg');
+        $this->input->withContent('notes', 'notes.txt');
+        mkdir($this->input->directory() . '/sub.jpg');
+
+        $names = (new InputDirectory($this->input->directory()))->names();
+        rmdir($this->input->directory() . '/sub.jpg');
+
+        $this->assertSame(['a.jpg', 'b.png'], $names);
+    }
+
+    public function testAddsAFileUnlessTheNameIsTaken(): void
+    {
+        $directory = new InputDirectory($this->input->directory());
+        $first = $this->outside->withContent('first', 'first.jpg');
+        $second = $this->outside->withContent('second', 'second.jpg');
+
+        $this->assertTrue($directory->addIfAbsent($first, 'photo.jpg'));
+        $this->assertFalse($directory->addIfAbsent($second, 'photo.jpg'));
+        $this->assertStringEqualsFile($this->input->directory() . '/photo.jpg', 'first');
     }
 }

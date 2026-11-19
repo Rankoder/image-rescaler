@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration;
 
-use App\Infrastructure\Cli\InputDirectory;
+use App\Infrastructure\Filesystem\InputDirectory;
 use App\Infrastructure\Cli\ResizeCommand;
 use PHPUnit\Framework\TestCase;
 use Tests\Support\TestFiles;
