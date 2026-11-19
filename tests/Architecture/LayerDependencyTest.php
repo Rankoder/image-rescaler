@@ -32,7 +32,7 @@ final class LayerDependencyTest
             ->because('L2: dependencies point inward');
     }
 
-    // Intervention is allowed: image transformation happens in memory
+    // Intervention reads and writes files by path, so it stays behind ImageResizer in Infrastructure
     public function test_application_reaches_the_outside_world_only_through_adapters(): Rule
     {
         return PHPat::rule()
@@ -42,6 +42,7 @@ final class LayerDependencyTest
                 Selector::inNamespace('Aws'),
                 Selector::inNamespace('Bramus'),
                 Selector::inNamespace('GuzzleHttp'),
+                Selector::inNamespace('Intervention'),
                 Selector::inNamespace('Kunnu'),
                 Selector::inNamespace('Nyholm'),
                 Selector::inNamespace('Psr\Http'),
