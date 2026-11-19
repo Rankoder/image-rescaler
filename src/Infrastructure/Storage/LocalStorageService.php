@@ -18,22 +18,39 @@ final class LocalStorageService extends AbstractStorageService
         return $this->publicBaseUrl . '/files/' . $filePath;
     }
 
-    protected function store(string $sourcePath, string $destinationFilename): void
+    protected function createIfAbsent(string $sourcePath, string $destinationFilename): bool
     {
-        if (!file_exists($sourcePath)) {
+        $source = @fopen($sourcePath, 'r');
+        if ($source === false) {
             throw new RuntimeException("File not found at path: {$sourcePath}");
         }
 
-        $this->ensureDirectoryExists();
-        $destinationPath = $this->directory . '/' . $destinationFilename;
-        if (!copy($sourcePath, $destinationPath)) {
-            throw new RuntimeException("Failed to copy file from {$sourcePath} to {$destinationPath}");
-        }
-    }
+        try {
+            $this->ensureDirectoryExists();
+            $destinationPath = $this->directory . '/' . $destinationFilename;
 
-    protected function fileExists(string $filename): bool
-    {
-        return file_exists($this->directory . '/' . $filename);
+            // 'x' creates the file only if it does not exist yet, in one step
+            $destination = @fopen($destinationPath, 'x');
+            if ($destination === false) {
+                if (file_exists($destinationPath)) {
+                    return false;
+                }
+
+                throw new RuntimeException("Cannot create {$destinationPath}");
+            }
+
+            $copied = stream_copy_to_stream($source, $destination);
+            fclose($destination);
+            if ($copied === false) {
+                unlink($destinationPath);
+
+                throw new RuntimeException("Failed to copy file from {$sourcePath} to {$destinationPath}");
+            }
+
+            return true;
+        } finally {
+            fclose($source);
+        }
     }
 
     private function ensureDirectoryExists(): void

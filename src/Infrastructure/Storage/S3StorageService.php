@@ -21,27 +21,24 @@ final class S3StorageService extends AbstractStorageService
         return sprintf('https://%s.s3.%s.amazonaws.com/%s', $this->bucket, $this->region, $filePath);
     }
 
-    protected function store(string $sourcePath, string $destinationFilename): void
+    protected function createIfAbsent(string $sourcePath, string $destinationFilename): bool
     {
         try {
             $this->client->putObject([
                 'Bucket' => $this->bucket,
                 'Key' => $destinationFilename,
                 'SourceFile' => $sourcePath,
+                // S3 refuses the put with 412 when the key exists, so the check and the write are one step
+                'IfNoneMatch' => '*',
             ]);
-        } catch (AwsException $e) {
-            throw new RuntimeException('Failed to upload file to S3: ' . $e->getMessage(), (int) $e->getCode(), $e);
-        }
-    }
-
-    protected function fileExists(string $filename): bool
-    {
-        try {
-            $this->client->headObject(['Bucket' => $this->bucket, 'Key' => $filename]);
 
             return true;
-        } catch (AwsException) {
-            return false;
+        } catch (AwsException $e) {
+            if ($e->getStatusCode() === 412) {
+                return false;
+            }
+
+            throw new RuntimeException('Failed to upload file to S3: ' . $e->getMessage(), (int) $e->getCode(), $e);
         }
     }
 }

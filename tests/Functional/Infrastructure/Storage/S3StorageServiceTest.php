@@ -9,6 +9,7 @@ use App\Infrastructure\Storage\S3StorageService;
 use Aws\Command;
 use Aws\Exception\AwsException;
 use Aws\S3\S3Client;
+use GuzzleHttp\Psr7\Response;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Mockery\MockInterface;
@@ -36,29 +37,33 @@ final class S3StorageServiceTest extends TestCase
         $this->files->remove();
     }
 
-    public function testPutsTheFileUnderTheFirstFreeVersion(): void
+    public function testPutsOnlyIfTheKeyIsFreeAndMovesOnToTheNextVersionWhenItIsTaken(): void
     {
         $source = $this->files->withContent('image', 'thumb.jpg');
-        $this->client->shouldReceive('headObject')->with(['Bucket' => 'images', 'Key' => 'thumb_v1.jpg'])->andReturn([]);
-        $this->client->shouldReceive('headObject')->with(['Bucket' => 'images', 'Key' => 'thumb_v2.jpg'])->andThrow($this->notFound());
-        $this->client->shouldReceive('putObject')->once()->with(['Bucket' => 'images', 'Key' => 'thumb_v2.jpg', 'SourceFile' => $source]);
+        $this->client->shouldReceive('putObject')
+            ->once()
+            ->with(['Bucket' => 'images', 'Key' => 'thumb_v1.jpg', 'SourceFile' => $source, 'IfNoneMatch' => '*'])
+            ->andThrow($this->failure(412));
+        $this->client->shouldReceive('putObject')
+            ->once()
+            ->with(['Bucket' => 'images', 'Key' => 'thumb_v2.jpg', 'SourceFile' => $source, 'IfNoneMatch' => '*']);
 
         $this->assertSame('thumb_v2.jpg', $this->service->upload(new ImageValueObject($source, 'thumb.jpg')));
         $this->assertFileDoesNotExist($source);
     }
 
-    public function testAFailedPutIsReportedWithTheCause(): void
+    public function testAnyOtherFailureIsReportedWithTheCause(): void
     {
         $source = $this->files->withContent('image', 'thumb.jpg');
-        $this->client->shouldReceive('headObject')->andThrow($this->notFound());
-        $failure = new AwsException('Access denied', new Command('putObject'));
-        $this->client->shouldReceive('putObject')->andThrow($failure);
+        $failure = $this->failure(403);
+        $this->client->shouldReceive('putObject')->once()->andThrow($failure);
 
         try {
             $this->service->upload(new ImageValueObject($source, 'thumb.jpg'));
             $this->fail('The upload did not fail.');
         } catch (RuntimeException $exception) {
             $this->assertSame($failure, $exception->getPrevious());
+            $this->assertFileDoesNotExist($source);
         }
     }
 
@@ -67,8 +72,8 @@ final class S3StorageServiceTest extends TestCase
         $this->assertSame('https://images.s3.eu-central-1.amazonaws.com/thumb_v1.jpg', $this->service->getPublicUrl('thumb_v1.jpg'));
     }
 
-    private function notFound(): AwsException
+    private function failure(int $status): AwsException
     {
-        return new AwsException('Not found', new Command('headObject'));
+        return new AwsException("HTTP {$status}", new Command('PutObject'), ['response' => new Response($status)]);
     }
 }

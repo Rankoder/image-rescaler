@@ -6,46 +6,40 @@ namespace App\Infrastructure\Storage;
 
 use App\Domain\Interfaces\StorageServiceInterface;
 use App\Domain\ValueObjects\ImageValueObject;
+use RuntimeException;
 
 /**
- * Stores under the first free name with a _v<n> suffix, so nothing is overwritten.
+ * Stores under the first free name with a _v<n> suffix. Each adapter creates the file only if the
+ * name is still free, in one step, so two uploads at the same moment never get the same name.
  */
 abstract class AbstractStorageService implements StorageServiceInterface
 {
+    private const int MAX_VERSIONS = 1000;
+
     public function upload(ImageValueObject $image): string
     {
         try {
-            $filename = $this->generateVersionedFilename($image->getFilename());
-            $this->store($image->getPath(), $filename);
+            $baseName = pathinfo($image->getFilename(), PATHINFO_FILENAME);
+            $extension = pathinfo($image->getFilename(), PATHINFO_EXTENSION);
+            $extension = $extension === '' ? '' : '.' . $extension;
 
-            return $filename;
+            for ($version = 1; $version <= self::MAX_VERSIONS; $version++) {
+                $filename = "{$baseName}_v{$version}{$extension}";
+                if ($this->createIfAbsent($image->getPath(), $filename)) {
+                    return $filename;
+                }
+            }
+
+            throw new RuntimeException(sprintf('No free name for %s after %d versions.', $image->getFilename(), self::MAX_VERSIONS));
         } finally {
             $this->removeTemporaryFile($image->getPath());
         }
     }
 
-    abstract protected function fileExists(string $filename): bool;
-
-    abstract protected function store(string $sourcePath, string $destinationFilename): void;
-
-    private function generateVersionedFilename(string $filename): string
-    {
-        $baseName = pathinfo($filename, PATHINFO_FILENAME);
-        $extension = pathinfo($filename, PATHINFO_EXTENSION);
-        $extension = $extension === '' ? '' : '.' . $extension;
-        $version = 1;
-
-        while ($this->fileExists($this->createVersionedFilename($baseName, $version, $extension))) {
-            $version++;
-        }
-
-        return $this->createVersionedFilename($baseName, $version, $extension);
-    }
-
-    private function createVersionedFilename(string $baseName, int $version, string $extension): string
-    {
-        return "{$baseName}_v{$version}{$extension}";
-    }
+    /**
+     * Stores the file under the name unless something is stored there already; false when the name is taken.
+     */
+    abstract protected function createIfAbsent(string $sourcePath, string $destinationFilename): bool;
 
     private function removeTemporaryFile(string $filePath): void
     {

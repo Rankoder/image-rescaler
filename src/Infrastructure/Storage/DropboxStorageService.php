@@ -7,7 +7,6 @@ namespace App\Infrastructure\Storage;
 use Kunnu\Dropbox\Dropbox;
 use Kunnu\Dropbox\DropboxFile;
 use Kunnu\Dropbox\Exceptions\DropboxClientException;
-use Kunnu\Dropbox\Models\FileMetadata;
 use RuntimeException;
 
 final class DropboxStorageService extends AbstractStorageService
@@ -39,26 +38,19 @@ final class DropboxStorageService extends AbstractStorageService
         return $link['url'];
     }
 
-    protected function store(string $sourcePath, string $destinationFilename): void
+    protected function createIfAbsent(string $sourcePath, string $destinationFilename): bool
     {
         try {
-            $this->dropbox->upload(new DropboxFile($sourcePath), $this->path($destinationFilename), ['autorename' => true]);
-        } catch (DropboxClientException $e) {
-            throw new RuntimeException('File upload to Dropbox failed: ' . $e->getMessage(), 0, $e);
-        }
-    }
+            // In "add" mode without autorename Dropbox refuses a taken path with a conflict instead of renaming
+            $this->dropbox->upload(new DropboxFile($sourcePath), $this->path($destinationFilename), ['mode' => 'add', 'autorename' => false]);
 
-    protected function fileExists(string $filename): bool
-    {
-        try {
-            return $this->dropbox->getMetadata($this->path($filename)) instanceof FileMetadata;
+            return true;
         } catch (DropboxClientException $e) {
-            // Only "not found" means the name is free; an auth or network error must not pass for it
-            if (str_contains($e->getMessage(), 'not_found')) {
+            if (str_contains($e->getMessage(), 'conflict')) {
                 return false;
             }
 
-            throw new RuntimeException('Checking a file on Dropbox failed: ' . $e->getMessage(), 0, $e);
+            throw new RuntimeException('File upload to Dropbox failed: ' . $e->getMessage(), 0, $e);
         }
     }
 
