@@ -44,7 +44,7 @@ paths:
           multipart/form-data:
             schema:
               type: object
-              required: [file, max_width, max_height]
+              required: [max_width, max_height]
               properties:
                 file:
                   type: string
@@ -53,6 +53,13 @@ paths:
                     JPEG, PNG or WebP, at most 5 MB (5 242 880 bytes) and 5000 × 5000 px, in no
                     dimension smaller than the frame. The type is read from the content, and the
                     file name's extension must match it (`.jpg` or `.jpeg` for JPEG).
+                    Give exactly one of `file` and `image`.
+                image:
+                  type: string
+                  pattern: '^[A-Za-z0-9_-]{1,100}\.(jpg|jpeg|png|webp)$'
+                  description: |
+                    Name of an image in the input directory, as `GET /images` lists it, instead of
+                    sending a file. The same rules apply as for `file`.
                 max_width:
                   type: integer
                   minimum: 40
@@ -96,6 +103,81 @@ paths:
           description: |
             Processing or storage failed. The message is always the same; the details (exception,
             bucket, paths) go to the server log only.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+
+  /images:
+    get:
+      summary: Lists the images in the input directory
+      description: The sample images shipped with the app and the ones added with `POST /images`.
+      responses:
+        '200':
+          description: Names, sorted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [images]
+                additionalProperties: false
+                properties:
+                  images:
+                    type: array
+                    items:
+                      type: string
+                    example: [landscape.jpg, portrait.png, square.webp]
+    post:
+      summary: Adds an image to the input directory
+      description: |
+        The file follows the same rules as in `POST /upload`, except the frame. It is stored under
+        `name` (or the file's own name, reduced to safe characters) with the extension of its type;
+        an existing image is never replaced.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                name:
+                  type: string
+                  pattern: '^[A-Za-z0-9_-]{1,100}$'
+                  description: Name without extension
+      responses:
+        '201':
+          description: The image is added
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, name]
+                additionalProperties: false
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  name:
+                    type: string
+                    example: holiday.jpg
+        '400':
+          description: The request is not `multipart/form-data`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '422':
+          description: The file or the name is invalid, or the name is taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '500':
+          description: Storing failed
           content:
             application/json:
               schema:
@@ -167,7 +249,7 @@ components:
         field:
           type: string
           nullable: true
-          enum: [file, max_width, max_height, service, output_filename, null]
+          enum: [file, image, name, max_width, max_height, service, output_filename, null]
           description: The field the error is about; `null` for an error of the whole request
         code:
           type: string
@@ -185,6 +267,9 @@ components:
             - invalid_characters
             - too_long
             - unsupported
+            - not_found
+            - conflicts_with_file
+            - already_exists
           description: |
             - `malformed_request`: the request is not `multipart/form-data` (400, `field` is `null`)
             - `required`: the field is missing
@@ -196,9 +281,13 @@ components:
             - `smaller_than_frame`: the image is smaller than the frame in a dimension
             - `not_integer`: `max_width` or `max_height` is not a whole number
             - `out_of_range`: `max_width` or `max_height` is outside 40–5000
-            - `invalid_characters`: `output_filename` holds other characters than letters, digits, `-` and `_`
-            - `too_long`: `output_filename` is over 100 characters
+            - `invalid_characters`: `output_filename` or `name` holds other characters than letters, digits, `-` and `_`
+            - `too_long`: `output_filename` or `name` is over 100 characters
             - `unsupported`: `service` is not `local`, `s3` or `dropbox`
+            - `not_found`: `image` names no image in the input directory
+            - `conflicts_with_file`: both `file` and `image` are given
+            - `already_exists`: an image of that `name` is in the input directory already
+            - `required` for `file` in `POST /upload`: neither `file` nor `image` is given
         message:
           type: string
           example: The image must be at least 200 × 150 px to fill the frame.

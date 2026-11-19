@@ -11,131 +11,67 @@ use App\Application\Validation\ResizeInput;
 use App\Application\Validation\SourceFile;
 use App\Application\Validation\ValidationError;
 use App\Application\Validation\ValidationFailed;
-use Psr\Http\Message\ResponseFactoryInterface;
+use App\Infrastructure\Filesystem\InputDirectory;
+use App\Infrastructure\Http\JsonResponses;
+use App\Infrastructure\Http\MultipartRequest;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\StreamFactoryInterface;
-use Psr\Http\Message\UploadedFileInterface;
 use Psr\Log\LoggerInterface;
-use RuntimeException;
 use Throwable;
 
 final readonly class ImageController
 {
     public function __construct(
         private ResizeAndStoreImage $resizeAndStoreImage,
-        private ResponseFactoryInterface $responseFactory,
-        private StreamFactoryInterface $streamFactory,
+        private JsonResponses $responses,
+        private InputDirectory $inputDirectory,
         private int $postMaxSize,
         private LoggerInterface $logger,
     ) {}
 
     public function upload(ServerRequestInterface $request): ResponseInterface
     {
-        if (!str_starts_with(strtolower($request->getHeaderLine('Content-Type')), 'multipart/form-data')) {
-            return $this->malformedRequest('The request must be multipart/form-data.');
+        $form = new MultipartRequest($request, $this->postMaxSize);
+        $unreadable = $form->unreadable($this->responses);
+        if ($unreadable !== null) {
+            return $unreadable;
         }
 
-        if ($this->bodyWasDropped($request)) {
-            return $this->validationFailed([
-                new ValidationError(Field::File, ErrorCode::TooLarge, 'The request is larger than the server accepts.'),
+        $image = $form->field('image');
+        $image = $image === '' ? null : $image;
+        if ($image !== null && $form->hasFile()) {
+            return $this->responses->validationFailed([
+                new ValidationError(Field::Image, ErrorCode::ConflictsWithFile, 'Give either file or image, not both.'),
             ]);
         }
 
-        $file = $request->getUploadedFiles()['file'] ?? null;
-        if ($file instanceof UploadedFileInterface && $file->getError() === UPLOAD_ERR_PARTIAL) {
-            return $this->malformedRequest('The file was only partly uploaded.');
-        }
-
         try {
-            $stored = $this->resizeAndStoreImage->handle($this->inputFrom($request, $file));
+            $stored = $this->resizeAndStoreImage->handle(new ResizeInput(
+                $image === null ? $form->file() : $this->imageFromInputDirectory($image),
+                $form->field('max_width'),
+                $form->field('max_height'),
+                $form->field('service'),
+                $form->field('output_filename'),
+            ));
 
-            return $this->json(200, ['status' => 'success', 'path' => $stored->path, 'url' => $stored->url]);
+            return $this->responses->json(200, ['status' => 'success', 'path' => $stored->path, 'url' => $stored->url]);
         } catch (ValidationFailed $failure) {
-            return $this->validationFailed($failure->errors);
+            return $this->responses->validationFailed($failure->errors);
         } catch (Throwable $failure) {
             // The details name buckets, paths and libraries, so they go to the log, not to the client
             $this->logger->error('Upload failed', ['exception' => $failure]);
 
-            return $this->json(500, ['status' => 'error', 'message' => 'The image could not be processed or stored.']);
+            return $this->responses->serverError();
         }
     }
 
-    private function inputFrom(ServerRequestInterface $request, mixed $file): ResizeInput
+    // Over HTTP every name that is not a plain image in the directory is simply not found, ../ and hidden files included
+    private function imageFromInputDirectory(string $name): SourceFile
     {
-        $fields = $request->getParsedBody();
-        $field = static fn(string $name): ?string => is_array($fields) && is_string($fields[$name] ?? null) ? $fields[$name] : null;
+        $source = InputDirectory::isImageName($name) ? $this->inputDirectory->sourceFile($name, Field::Image) : null;
 
-        return new ResizeInput(
-            $file instanceof UploadedFileInterface ? $this->sourceFile($file) : null,
-            $field('max_width'),
-            $field('max_height'),
-            $field('service'),
-            $field('output_filename'),
-        );
-    }
-
-    private function sourceFile(UploadedFileInterface $file): ?SourceFile
-    {
-        $name = $file->getClientFilename() ?? '';
-
-        return match ($file->getError()) {
-            UPLOAD_ERR_OK => SourceFile::at($this->temporaryPath($file), $name),
-            UPLOAD_ERR_NO_FILE => null,
-            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => SourceFile::rejected(ErrorCode::TooLarge, $name),
-            default => throw new RuntimeException('The uploaded file could not be stored on the server.'),
-        };
-    }
-
-    private function temporaryPath(UploadedFileInterface $file): string
-    {
-        $path = $file->getStream()->getMetadata('uri');
-        if (!is_string($path)) {
-            throw new RuntimeException('The uploaded file has no temporary path.');
-        }
-
-        return $path;
-    }
-
-    // PHP drops the whole body of a request over post_max_size and only logs a warning
-    private function bodyWasDropped(ServerRequestInterface $request): bool
-    {
-        return $this->postMaxSize > 0 && (int) $request->getHeaderLine('Content-Length') > $this->postMaxSize;
-    }
-
-    /**
-     * @param list<ValidationError> $errors
-     */
-    private function validationFailed(array $errors): ResponseInterface
-    {
-        return $this->json(422, [
-            'status' => 'error',
-            'errors' => array_map(
-                static fn(ValidationError $error): array => [
-                    'field' => $error->field->value,
-                    'code' => $error->code->value,
-                    'message' => $error->message,
-                ],
-                $errors,
-            ),
-        ]);
-    }
-
-    private function malformedRequest(string $message): ResponseInterface
-    {
-        return $this->json(400, [
-            'status' => 'error',
-            'errors' => [['field' => null, 'code' => 'malformed_request', 'message' => $message]],
-        ]);
-    }
-
-    /**
-     * @param array<string, mixed> $body
-     */
-    private function json(int $status, array $body): ResponseInterface
-    {
-        return $this->responseFactory->createResponse($status)
-            ->withHeader('Content-Type', 'application/json')
-            ->withBody($this->streamFactory->createStream(json_encode($body, JSON_THROW_ON_ERROR)));
+        return $source === null || $source->problem !== null
+            ? SourceFile::rejected(ErrorCode::NotFound, $name, Field::Image)
+            : $source;
     }
 }

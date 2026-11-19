@@ -9,19 +9,12 @@ use App\Application\Validation\Field;
 use App\Application\Validation\ResizeInput;
 use App\Application\Validation\SourceFile;
 use App\Application\Validation\ValidationFailed;
+use App\Infrastructure\Filesystem\InputDirectory;
 use Exception;
 
 final readonly class ResizeCommand
 {
     public const string USAGE = 'Usage: bin/resize -f <file in the input directory> -w <max_width> -h <max_height> [-s <service>] [-o <output_filename>]';
-
-    private const array OPTIONS = [
-        Field::File->value => 'f',
-        Field::MaxWidth->value => 'w',
-        Field::MaxHeight->value => 'h',
-        Field::Service->value => 's',
-        Field::OutputFilename->value => 'o',
-    ];
 
     public function __construct(
         private ResizeAndStoreImage $resizeAndStoreImage,
@@ -47,7 +40,7 @@ final readonly class ResizeCommand
             ));
         } catch (ValidationFailed $failure) {
             foreach ($failure->errors as $error) {
-                fwrite($errorOutput, sprintf("-%s: %s\n", self::OPTIONS[$error->field->value], $error->message));
+                fwrite($errorOutput, sprintf("%s: %s\n", $this->option($error->field), $error->message));
             }
             fwrite($errorOutput, self::USAGE . "\n");
 
@@ -66,5 +59,16 @@ final readonly class ResizeCommand
     private function sourceFile(?string $name): ?SourceFile
     {
         return $name === null || $name === '' ? null : $this->inputDirectory->sourceFile($name);
+    }
+
+    private function option(Field $field): string
+    {
+        return match ($field) {
+            Field::File, Field::Image => '-f',
+            Field::MaxWidth => '-w',
+            Field::MaxHeight => '-h',
+            Field::Service => '-s',
+            Field::OutputFilename, Field::Name => '-o',
+        };
     }
 }

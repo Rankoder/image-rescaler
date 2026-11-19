@@ -87,6 +87,8 @@ COPY routes.php ./
 COPY bin/resize ./bin/
 
 RUN install -d -o www-data -g www-data storage storage/input
+# A new storage volume starts with the sample images; an existing one keeps its own content
+COPY --chown=www-data:www-data resources/images/ storage/input/
 
 USER www-data
 
