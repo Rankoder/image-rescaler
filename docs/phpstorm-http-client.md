@@ -6,12 +6,12 @@ Before you start: the container must be running (`docker compose up -d`).
 
 ## Environments
 
-`http/http-client.env.json` defines where the requests go:
+`http/http-client.env.json` defines where the requests go. The port in each `baseUrl` must be the `APP_PORT` from the `.env` of the copy you want to reach:
 
 | Environment | `baseUrl` | Use for |
 |-------------|-----------|---------|
-| `dev` | `http://localhost:8080` | this copy of the project |
-| `review` | `http://localhost:8081` | a second copy next to it, see "A second copy next to this one" in the README |
+| `dev` | `http://localhost:8080` | a copy running on the default `APP_PORT` |
+| `review` | `http://localhost:8081` | a second copy on another `APP_PORT`; change the port if yours differs, see "A second copy next to this one" in the README |
 
 ## Running the requests
 
