@@ -1,10 +1,15 @@
 # image-rescaler
 
-What the app does, its structure and all commands are in the README, imported here:
+Plain-PHP REST API and CLI tool that crops images to an exact frame and stores them in local storage, Amazon S3 or Dropbox.
 
-@README.md
-
-PHP and Composer run only in Docker, in the `web` service. Before a PR, `composer check` must pass.
+- **Runtime:** PHP and Composer run only in Docker, in the `web` service (`docker compose up --build -d`).
+- **Port:** configured via `APP_PORT` in `.env` (`8080` by default; secondary clones use their own `APP_PORT` and `COMPOSE_PROJECT_NAME`).
+- **Contract:** HTTP endpoints, fields, limits and error codes are defined in `openapi.yaml` and verified by contract tests.
+- **Commands:**
+  - `docker compose exec web composer check` — CS, PHPStan (level max + phpat architecture rules) and all tests; must pass before a PR.
+  - `docker compose exec web composer test` — PHPUnit (`test:unit`, `test:functional`, `test:integration`, `test:contract` for single suites).
+  - `bin/fresh-check <branch>` (host) — clones the pushed branch, builds a fresh dev image and runs `composer check` (add `--prod` for Docker/Composer changes).
+- **Details:** full setup, endpoints, CLI options and project structure are in `README.md` — read it on demand instead of loading it on every session.
 
 ## Git
 
@@ -19,8 +24,6 @@ PHP and Composer run only in Docker, in the `web` service. Before a PR, `compose
 ## Code standard
 
 Everything in the repo is in English: code, names, commits, docs.
-
-The current code does not meet all of these rules yet. New and changed code follows them; the rest is cleaned up in dedicated refactor tasks, not along the way.
 
 Kept:
 - `declare(strict_types=1)` in every file,
