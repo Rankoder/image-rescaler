@@ -132,9 +132,11 @@ final class InputDirectoryTest extends TestCase
         $first = $this->outside->withContent('first', 'first.jpg');
         $second = $this->outside->withContent('second', 'second.jpg');
 
-        $this->assertTrue($directory->addIfAbsent($first, 'photo.jpg'));
-        $this->assertFalse($directory->addIfAbsent($second, 'photo.jpg'));
+        $this->assertSame(ImageAddOutcome::Added, $directory->addWithinLimit($first, 'photo.jpg', 10));
+        $this->assertSame(ImageAddOutcome::AlreadyExists, $directory->addWithinLimit($second, 'photo.jpg', 10));
         $this->assertStringEqualsFile($this->input->directory() . '/photo.jpg', 'first');
+        $this->assertFileDoesNotExist($first);
+        $this->assertFileDoesNotExist($second);
     }
 
     public function testEnforcesTheImageLimitWhenAdding(): void

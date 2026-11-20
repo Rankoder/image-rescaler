@@ -19,20 +19,20 @@ abstract class AbstractStorageService implements StorageServiceInterface
     public function upload(ImageValueObject $image): string
     {
         try {
-            $baseName = pathinfo($image->getFilename(), PATHINFO_FILENAME);
-            $extension = pathinfo($image->getFilename(), PATHINFO_EXTENSION);
+            $baseName = pathinfo($image->filename, PATHINFO_FILENAME);
+            $extension = pathinfo($image->filename, PATHINFO_EXTENSION);
             $extension = $extension === '' ? '' : '.' . $extension;
 
             for ($version = 1; $version <= self::MAX_VERSIONS; $version++) {
                 $filename = "{$baseName}_v{$version}{$extension}";
-                if ($this->createIfAbsent($image->getPath(), $filename)) {
+                if ($this->createIfAbsent($image->path, $filename)) {
                     return $filename;
                 }
             }
 
-            throw new RuntimeException(sprintf('No free name for %s after %d versions.', $image->getFilename(), self::MAX_VERSIONS));
+            throw new RuntimeException(sprintf('No free name for %s after %d versions.', $image->filename, self::MAX_VERSIONS));
         } finally {
-            $this->removeTemporaryFile($image->getPath());
+            $this->removeTemporaryFile($image->path);
         }
     }
 

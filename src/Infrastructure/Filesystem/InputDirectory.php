@@ -44,48 +44,38 @@ final readonly class InputDirectory implements ImageLibrary
         return $source->problem === null ? $source->path : null;
     }
 
-    public function addIfAbsent(string $sourcePath, string $name): bool
-    {
-        return $this->addWithOptionalLimit($sourcePath, $name, null) === ImageAddOutcome::Added;
-    }
-
     public function addWithinLimit(string $sourcePath, string $name, int $limit): ImageAddOutcome
     {
         try {
-            return $this->addWithOptionalLimit($sourcePath, $name, $limit);
+            if (!is_dir($this->path) && !mkdir($this->path, 0777, true) && !is_dir($this->path)) {
+                throw new RuntimeException(sprintf('Directory "%s" was not created', $this->path));
+            }
+
+            $lock = fopen($this->path . '/.lock', 'c');
+            if ($lock === false) {
+                throw new RuntimeException(sprintf('Cannot open lock file in "%s"', $this->path));
+            }
+
+            try {
+                if (!flock($lock, LOCK_EX)) {
+                    throw new RuntimeException(sprintf('Cannot lock directory "%s"', $this->path));
+                }
+
+                if (count($this->names()) >= $limit) {
+                    return ImageAddOutcome::LimitReached;
+                }
+
+                return $this->copy->create($sourcePath, $this->path, $name)
+                    ? ImageAddOutcome::Added
+                    : ImageAddOutcome::AlreadyExists;
+            } finally {
+                flock($lock, LOCK_UN);
+                fclose($lock);
+            }
         } finally {
             if (is_file($sourcePath)) {
                 unlink($sourcePath);
             }
-        }
-    }
-
-    private function addWithOptionalLimit(string $sourcePath, string $name, ?int $limit): ImageAddOutcome
-    {
-        if (!is_dir($this->path) && !mkdir($this->path, 0777, true) && !is_dir($this->path)) {
-            throw new RuntimeException(sprintf('Directory "%s" was not created', $this->path));
-        }
-
-        $lock = fopen($this->path . '/.lock', 'c');
-        if ($lock === false) {
-            throw new RuntimeException(sprintf('Cannot open lock file in "%s"', $this->path));
-        }
-
-        try {
-            if (!flock($lock, LOCK_EX)) {
-                throw new RuntimeException(sprintf('Cannot lock directory "%s"', $this->path));
-            }
-
-            if ($limit !== null && count($this->names()) >= $limit) {
-                return ImageAddOutcome::LimitReached;
-            }
-
-            return $this->copy->create($sourcePath, $this->path, $name)
-                ? ImageAddOutcome::Added
-                : ImageAddOutcome::AlreadyExists;
-        } finally {
-            flock($lock, LOCK_UN);
-            fclose($lock);
         }
     }
 
