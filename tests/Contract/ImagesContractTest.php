@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Contract;
 
-use Nyholm\Psr7\Response;
+use Nyholm\Psr7\ServerRequest;
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\UploadedFileInterface;
 use Tests\Support\StoredFiles;
 use Tests\Support\TestFiles;
+use Tests\Support\Wiring;
 
 /**
- * The input directory over HTTP, sent through routes.php with its own INPUT_DIR; every response checked against openapi.yaml.
+ * The input directory over HTTP, sent through HttpKernel with its own INPUT_DIR; every response checked against openapi.yaml.
  */
 final class ImagesContractTest extends TestCase
 {
@@ -41,7 +42,6 @@ final class ImagesContractTest extends TestCase
         StoredFiles::remove($this->outputName);
     }
 
-    #[RunInSeparateProcess]
     public function testListsTheImagesInTheInputDirectory(): void
     {
         $this->input->withContent('partial', '.0123-hidden.jpg');
@@ -53,7 +53,6 @@ final class ImagesContractTest extends TestCase
         $this->assertSame(['images' => ['landscape.jpg', 'portrait.png']], $this->json($response));
     }
 
-    #[RunInSeparateProcess]
     public function testAddsAnImageUnderTheGivenNameWithTheExtensionOfItsType(): void
     {
         $response = $this->addImage($this->files->webp(400, 400, 'upload.webp'), 'upload.webp', ['name' => 'holiday']);
@@ -69,7 +68,6 @@ final class ImagesContractTest extends TestCase
         $this->assertSame('image/webp', $size['mime']);
     }
 
-    #[RunInSeparateProcess]
     public function testReencodesUploadedImageAndStripsExifAndGpsMetadata(): void
     {
         $source = $this->files->jpegWithExif(200, 150, 'camera.jpg');
@@ -87,7 +85,6 @@ final class ImagesContractTest extends TestCase
         $this->assertStringNotContainsString('GPSLatitude', $bytes);
     }
 
-    #[RunInSeparateProcess]
     public function testWithoutANameTheFileKeepsASafeVersionOfItsOwn(): void
     {
         $response = $this->addImage($this->files->png(100, 100, 'source.png'), 'my photo.png');
@@ -95,7 +92,6 @@ final class ImagesContractTest extends TestCase
         $this->assertSame(['status' => 'success', 'name' => 'my_photo.png'], $this->json($response));
     }
 
-    #[RunInSeparateProcess]
     public function testATakenNameIsRejectedAndTheImageIsKept(): void
     {
         $original = (string) file_get_contents($this->input->directory() . '/landscape.jpg');
@@ -106,7 +102,6 @@ final class ImagesContractTest extends TestCase
         $this->assertSame($original, file_get_contents($this->input->directory() . '/landscape.jpg'));
     }
 
-    #[RunInSeparateProcess]
     public function testRejectsAnAdditionWhenTheInputDirectoryHoldsTenImages(): void
     {
         for ($i = 3; $i <= 10; $i++) {
@@ -119,7 +114,6 @@ final class ImagesContractTest extends TestCase
         $this->assertCount(10, $this->listing());
     }
 
-    #[RunInSeparateProcess]
     public function testLimitReachedComesTogetherWithFieldErrors(): void
     {
         for ($i = 3; $i <= 10; $i++) {
@@ -149,7 +143,6 @@ final class ImagesContractTest extends TestCase
      * @param list<array{string, string}> $errors
      */
     #[DataProvider('rejectedAdditions')]
-    #[RunInSeparateProcess]
     public function testRejectsAnAddition(string $kind, string $clientFilename, array $fields, array $errors): void
     {
         $source = match ($kind) {
@@ -166,7 +159,6 @@ final class ImagesContractTest extends TestCase
         $this->assertSame(['landscape.jpg', 'portrait.png'], $this->listing());
     }
 
-    #[RunInSeparateProcess]
     public function testAnAdditionThatIsNotMultipartIsMalformed(): void
     {
         $response = $this->dispatch('POST', '/images', contentType: 'application/json');
@@ -174,7 +166,6 @@ final class ImagesContractTest extends TestCase
         $this->assertErrors(400, [[null, 'malformed_request']], 'post', '/images', $response);
     }
 
-    #[RunInSeparateProcess]
     public function testUploadCropsAnImageFromTheInputDirectory(): void
     {
         $response = $this->dispatch('POST', '/upload', fields: [
@@ -204,7 +195,6 @@ final class ImagesContractTest extends TestCase
     }
 
     #[DataProvider('imagesNotFound')]
-    #[RunInSeparateProcess]
     public function testUploadRejectsAnImageThatIsNotInTheDirectory(string $image): void
     {
         $this->input->withContent('partial', '.0123-hidden.jpg');
@@ -214,7 +204,6 @@ final class ImagesContractTest extends TestCase
         $this->assertErrors(422, [['image', 'not_found']], 'post', '/upload', $response);
     }
 
-    #[RunInSeparateProcess]
     public function testUploadAppliesTheFileRulesToAnImageFromTheDirectory(): void
     {
         $response = $this->dispatch('POST', '/upload', fields: ['image' => 'landscape.jpg', 'max_width' => '400', 'max_height' => '40']);
@@ -222,12 +211,11 @@ final class ImagesContractTest extends TestCase
         $this->assertErrors(422, [['image', 'smaller_than_frame']], 'post', '/upload', $response);
     }
 
-    #[RunInSeparateProcess]
     public function testUploadTakesAFileOrAnImageButNotBoth(): void
     {
         $source = $this->files->jpeg(150, 150, 'photo.jpg');
 
-        $response = $this->dispatch('POST', '/upload', files: $this->uploaded($source, 'photo.jpg'), fields: [
+        $response = $this->dispatch('POST', '/upload', files: ['file' => $this->uploadedFile($source, 'photo.jpg')], fields: [
             'image' => 'landscape.jpg',
             'max_width' => '60',
             'max_height' => '40',
@@ -236,12 +224,11 @@ final class ImagesContractTest extends TestCase
         $this->assertErrors(422, [['image', 'conflicts_with_file']], 'post', '/upload', $response);
     }
 
-    #[RunInSeparateProcess]
     public function testTheFileOrImageConflictComesWithTheOtherErrors(): void
     {
         $source = $this->files->jpeg(150, 150, 'photo.jpg');
 
-        $response = $this->dispatch('POST', '/upload', files: $this->uploaded($source, 'photo.jpg'), fields: [
+        $response = $this->dispatch('POST', '/upload', files: ['file' => $this->uploadedFile($source, 'photo.jpg')], fields: [
             'image' => 'landscape.jpg',
             'max_width' => '39',
             'max_height' => '40',
@@ -256,25 +243,11 @@ final class ImagesContractTest extends TestCase
      */
     private function addImage(string $source, string $clientFilename, array $fields = []): ResponseInterface
     {
-        return $this->dispatch('POST', '/images', files: $this->uploaded($source, $clientFilename), fields: $fields);
+        return $this->dispatch('POST', '/images', files: ['file' => $this->uploadedFile($source, $clientFilename)], fields: $fields);
     }
 
     /**
-     * @return array<string, array<string, int|string>>
-     */
-    private function uploaded(string $source, string $clientFilename): array
-    {
-        return ['file' => [
-            'name' => $clientFilename,
-            'type' => 'application/octet-stream',
-            'tmp_name' => $source,
-            'error' => UPLOAD_ERR_OK,
-            'size' => (int) filesize($source),
-        ]];
-    }
-
-    /**
-     * @param array<string, array<string, int|string>> $files
+     * @param array<string, UploadedFileInterface> $files
      * @param array<string, string> $fields
      */
     private function dispatch(
@@ -284,52 +257,11 @@ final class ImagesContractTest extends TestCase
         array $fields = [],
         string $contentType = 'multipart/form-data; boundary=contract',
     ): ResponseInterface {
-        $_SERVER['REQUEST_METHOD'] = $method;
-        $_SERVER['REQUEST_URI'] = $uri;
-        $_SERVER['SCRIPT_NAME'] = '/index.php';
-        $_SERVER['CONTENT_TYPE'] = $contentType;
-        $_POST = $fields;
-        $_FILES = $files;
+        $request = $method === 'POST'
+            ? $this->multipartRequest($uri, $files, $fields, $contentType)
+            : new ServerRequest($method, $uri);
 
-        ob_start();
-        try {
-            require __DIR__ . '/../../routes.php';
-        } finally {
-            $body = (string) ob_get_clean();
-        }
-
-        $status = http_response_code();
-
-        return new Response(is_int($status) ? $status : 200, ['Content-Type' => 'application/json'], $body);
-    }
-
-    /**
-     * @param list<array{?string, string}> $expected field and code of every error
-     */
-    private function assertErrors(int $status, array $expected, string $method, string $path, ResponseInterface $response): void
-    {
-        $this->assertMatchesContract($method, $path, $response);
-        $this->assertSame($status, $response->getStatusCode());
-
-        $errors = $this->json($response)['errors'] ?? null;
-        $this->assertIsArray($errors);
-        $actual = [];
-        foreach ($errors as $error) {
-            $this->assertIsArray($error);
-            $actual[] = [$error['field'] ?? null, $error['code'] ?? null];
-        }
-        $this->assertEqualsCanonicalizing($expected, $actual);
-    }
-
-    /**
-     * @return array<mixed>
-     */
-    private function json(ResponseInterface $response): array
-    {
-        $decoded = json_decode((string) $response->getBody(), true, flags: JSON_THROW_ON_ERROR);
-        $this->assertIsArray($decoded);
-
-        return $decoded;
+        return Wiring::httpKernel()->handle($request);
     }
 
     /**
