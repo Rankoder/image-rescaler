@@ -45,4 +45,14 @@ final class ContainerTest extends TestCase
         $this->expectExceptionMessage('Dropbox access token is not set.');
         $registry->get(StorageType::Dropbox);
     }
+
+    public function testDropboxWithAnInvalidDirectoryFailsOnlyWhenItIsUsed(): void
+    {
+        $registry = (new Container(AppConfig::fromEnvironment(['DROPBOX_DIRECTORY' => 'Apps/thumbnails'] + getenv(), '/app')))->storageRegistry();
+
+        $this->assertInstanceOf(LocalStorageService::class, $registry->get(StorageType::Local));
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('DROPBOX_DIRECTORY must start with "/", got "Apps/thumbnails".');
+        $registry->get(StorageType::Dropbox);
+    }
 }

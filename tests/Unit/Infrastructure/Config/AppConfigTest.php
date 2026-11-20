@@ -6,7 +6,6 @@ namespace Tests\Unit\Infrastructure\Config;
 
 use App\Infrastructure\Config\AppConfig;
 use App\Infrastructure\Config\AwsConfig;
-use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 final class AppConfigTest extends TestCase
@@ -43,12 +42,11 @@ final class AppConfigTest extends TestCase
         $this->assertSame('/Aplikacje/image-rescaler', $config->dropboxDirectory);
     }
 
-    public function testADropboxDirectoryWithoutALeadingSlashIsRejectedAtStartup(): void
+    public function testKeepsADropboxDirectoryWithoutALeadingSlashForStorageValidation(): void
     {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('DROPBOX_DIRECTORY must start with "/", got "Apps/thumbnails".');
+        $config = AppConfig::fromEnvironment(['DROPBOX_DIRECTORY' => 'Apps/thumbnails/'], '/app');
 
-        AppConfig::fromEnvironment(['DROPBOX_DIRECTORY' => 'Apps/thumbnails'], '/app');
+        $this->assertSame('Apps/thumbnails', $config->dropboxDirectory);
     }
 
     public function testTheDropboxRootIsAllowed(): void

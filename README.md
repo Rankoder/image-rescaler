@@ -5,6 +5,7 @@ A plain-PHP REST API and CLI tool that crops an image to a thumbnail of exactly 
 ## Requirements
 
 - Docker with Compose v2 (`docker compose`)
+- A filesystem supporting hard links (`link()`) for `storage/` (and `INPUT_DIR` when overridden) when using the `local` storage or `POST /images`
 
 PHP 8.5, Composer and all extensions run inside the container; nothing else is needed on the host.
 
@@ -67,10 +68,10 @@ All settings come from `.env`: Compose passes them to the container as environme
 | `AWS_REGION` | S3 region, e.g. `eu-central-1` |
 | `AWS_BUCKET_NAME` | target bucket |
 | `DROPBOX_ACCESS_TOKEN` | Dropbox API token; the app needs the `files.content.write`, `files.metadata.read` and `sharing.write` scopes, the last one for the returned link |
-| `DROPBOX_DIRECTORY` | Dropbox folder the images go to, `/Aplikacje/image-rescaler` by default; it must start with `/`, otherwise the app refuses to start (`/health` answers `500`, the log says why) |
-| `INPUT_DIR` | directory inside the container the CLI reads images from, `storage/input` when empty |
+| `DROPBOX_DIRECTORY` | Dropbox folder the images go to, `/Aplikacje/image-rescaler` by default; must start with `/` |
+| `INPUT_DIR` | input directory inside the container (used by `GET /images`, `POST /images` and the CLI), `storage/input` when empty |
 
-The limits of the API (types, size, dimensions) are fixed by the contract, not by configuration. Only the variables of the storage you use need real values.
+The limits of the API (types, size, dimensions) are fixed by the contract, not by configuration. Only the variables of the storage you use need real values; missing or invalid Dropbox settings (`DROPBOX_ACCESS_TOKEN` or `DROPBOX_DIRECTORY`) fail only uploads to `dropbox` (`500`, details in the log), not startup, `/health`, `local` or `s3`.
 
 ## API
 
@@ -146,7 +147,7 @@ curl -X POST http://localhost:8080/upload -F "image=landscape.jpg" -F "max_width
 
 ### `POST /images`
 
-Adds an image to the input directory. `file` follows the same rules as in `POST /upload`, without the frame; the optional `name` (letters, digits, `-` and `_`, up to 100 characters) sets its name, otherwise the file's own name reduced to those characters is used, and the extension comes from the type. A name that is taken is `422` `already_exists`: nothing is replaced.
+Adds an image to the input directory. `file` follows the same rules as in `POST /upload`, without the frame; it is re-encoded in its own format to strip embedded metadata (EXIF/GPS). The optional `name` (letters, digits, `-` and `_`, up to 100 characters) sets its name, otherwise the file's own name reduced to those characters is used, and the extension comes from the type. The input directory holds at most 10 images (including the sample ones), returning `422` `limit_reached` when full. A name that is taken is `422` `already_exists`: nothing is replaced.
 
 ```sh
 curl -X POST http://localhost:8080/images -F "file=@/path/to/photo.jpg" -F "name=holiday"

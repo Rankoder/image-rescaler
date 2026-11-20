@@ -171,6 +171,10 @@ final readonly class Container
             throw new RuntimeException('Dropbox access token is not set.');
         }
 
+        if (!str_starts_with($config->dropboxDirectory, '/')) {
+            throw new RuntimeException(sprintf('DROPBOX_DIRECTORY must start with "/", got "%s".', $config->dropboxDirectory));
+        }
+
         return new DropboxStorageService(
             new Dropbox(new DropboxApp('', '', $config->dropboxAccessToken)),
             $config->dropboxDirectory,
