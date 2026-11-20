@@ -9,7 +9,7 @@
 ```sh
 git switch <branch>
 docker compose up --build -d
-BASE=http://localhost:8080    # a second copy: its APP_PORT, e.g. 8081
+BASE=http://localhost:8080    # the APP_PORT from this copy's .env
 curl -s $BASE/health
 ```
 

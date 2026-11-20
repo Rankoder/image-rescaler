@@ -32,14 +32,18 @@ docker compose logs -f web
 
 ## A second copy next to this one
 
-A second copy of the project, e.g. a clone or worktree used for review, can run at the same time. In its `.env` set another host port and its own Compose project name:
+Several copies of the project, e.g. clones or worktrees, can run on one machine at the same time. In each copy's `.env` set its own host port and its own Compose project name:
 
 ```sh
-APP_PORT=8081
-COMPOSE_PROJECT_NAME=image-rescaler-review
+APP_PORT=8090
+COMPOSE_PROJECT_NAME=image-rescaler-copy2
 ```
 
-Without the project name, two copies in directories with the same name would share containers and replace each other. With these two lines `docker compose up --build -d` in that copy serves `http://localhost:8081`, and `docker compose exec web …` there runs in its own container.
+Without the project name, two copies in directories with the same name would share containers and replace each other. With these two lines `docker compose up --build -d` in that copy serves `http://localhost:8090`, and `docker compose exec web …` there runs in its own container.
+
+`compose.prod.yaml` names its project `image-rescaler-prod`, but only when `.env` has no `COMPOSE_PROJECT_NAME`; with it, the production setup takes the name from `.env` like the development one. So every copy that runs the production image needs its own `COMPOSE_PROJECT_NAME` and its own `APP_PORT`; copies without the variable, or with the same value, collide even on different ports. For the same reason the production and development setups of one copy share a project name, and `docker compose -f compose.prod.yaml up` replaces that copy's development container.
+
+The `curl` examples in this README assume the default port `8080`; with another `APP_PORT`, replace the port in the URL.
 
 ## Production image
 
