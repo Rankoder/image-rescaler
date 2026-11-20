@@ -71,9 +71,36 @@ final class InputDirectoryTest extends TestCase
 
     public function testADirectoryIsNotAFile(): void
     {
-        mkdir($this->input->directory() . '/sub');
+        mkdir($this->input->directory() . '/sub.jpg');
 
-        $problem = (new InputDirectory($this->input->directory(), new ExclusiveCopy()))->sourceFile('sub')->problem;
+        $problem = (new InputDirectory($this->input->directory(), new ExclusiveCopy()))->sourceFile('sub.jpg')->problem;
+        rmdir($this->input->directory() . '/sub.jpg');
+
+        $this->assertSame(ErrorCode::NotFound, $problem);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function nonImageNames(): iterable
+    {
+        yield 'hidden file' => ['.0123-hidden.jpg'];
+        yield 'other extension' => ['notes.txt'];
+        yield 'file with spaces' => ['my photo.jpg'];
+        yield 'file in a subdirectory' => ['sub/photo.jpg'];
+    }
+
+    #[DataProvider('nonImageNames')]
+    public function testRejectsAFileWhoseNameIsNotAPlainImageName(string $name): void
+    {
+        mkdir($this->input->directory() . '/sub');
+        $this->input->jpeg(50, 50, '.0123-hidden.jpg');
+        $this->input->withContent('notes', 'notes.txt');
+        $this->input->jpeg(50, 50, 'my photo.jpg');
+        $this->input->jpeg(50, 50, 'sub/photo.jpg');
+
+        $problem = (new InputDirectory($this->input->directory(), new ExclusiveCopy()))->sourceFile($name)->problem;
+        unlink($this->input->directory() . '/sub/photo.jpg');
         rmdir($this->input->directory() . '/sub');
 
         $this->assertSame(ErrorCode::NotFound, $problem);

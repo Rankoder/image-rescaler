@@ -9,6 +9,7 @@ use App\Application\Validation\Field;
 use App\Application\Validation\SourceFile;
 use App\Domain\Enums\ImageAddOutcome;
 use App\Domain\Interfaces\ImageLibrary;
+use App\Domain\ValueObjects\ImageName;
 use RuntimeException;
 
 /**
@@ -16,8 +17,6 @@ use RuntimeException;
  */
 final readonly class InputDirectory implements ImageLibrary
 {
-    private const string IMAGE_NAME = '/^[A-Za-z0-9_-]{1,100}\.(jpg|jpeg|png|webp)\z/';
-
     public function __construct(
         private string $path,
         private ExclusiveCopy $copy,
@@ -31,7 +30,7 @@ final readonly class InputDirectory implements ImageLibrary
 
         $names = array_values(array_filter(
             scandir($this->path) ?: [],
-            fn(string $name): bool => self::isImageName($name) && is_file($this->path . '/' . $name),
+            fn(string $name): bool => ImageName::isValid($name) && is_file($this->path . '/' . $name),
         ));
         sort($names);
 
@@ -84,11 +83,6 @@ final readonly class InputDirectory implements ImageLibrary
         }
     }
 
-    public static function isImageName(string $name): bool
-    {
-        return preg_match(self::IMAGE_NAME, $name) === 1;
-    }
-
     public function sourceFile(string $name, Field $field = Field::File): SourceFile
     {
         $root = realpath($this->path);
@@ -97,6 +91,9 @@ final readonly class InputDirectory implements ImageLibrary
         }
         if (str_starts_with($name, '/') || in_array('..', explode('/', $name), true)) {
             return SourceFile::rejected(ErrorCode::OutsideInputDirectory, $name, $field);
+        }
+        if (!ImageName::isValid($name)) {
+            return SourceFile::rejected(ErrorCode::NotFound, $name, $field);
         }
 
         $path = realpath($root . '/' . $name);
@@ -108,6 +105,6 @@ final readonly class InputDirectory implements ImageLibrary
             return SourceFile::rejected(ErrorCode::OutsideInputDirectory, $name, $field);
         }
 
-        return SourceFile::at($path, basename($name), $field);
+        return SourceFile::at($path, $name, $field);
     }
 }
