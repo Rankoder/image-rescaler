@@ -12,7 +12,9 @@ use Nyholm\Psr7\ServerRequest;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Log\AbstractLogger;
 use RuntimeException;
+use Stringable;
 use Tests\Support\TestFiles;
 use Tests\Support\Wiring;
 
@@ -96,6 +98,32 @@ final class UploadContractTest extends TestCase
         $this->assertSame($this->outputName . '_v2.jpg', $this->json($response)['path']);
     }
 
+    public function testAClientFilenameWithAPathOnlyShapesASafeNameInStorage(): void
+    {
+        $publicDir = __DIR__ . '/../../public/';
+        $publicBefore = scandir($publicDir);
+
+        $response = $this->upload(
+            $this->files->jpeg(150, 150),
+            '../public/shell.jpg',
+            ['max_width' => '60', 'max_height' => '40'],
+            withOutputFilename: false,
+        );
+
+        $path = $this->json($response)['path'] ?? null;
+        try {
+            $this->assertSame(200, $response->getStatusCode());
+            $this->assertIsString($path);
+            $this->assertMatchesRegularExpression('/^resized_shell_[a-z0-9]{13}_v1\.jpg$/', $path);
+            $this->assertFileExists(self::STORAGE_DIR . $path);
+            $this->assertSame($publicBefore, scandir($publicDir));
+        } finally {
+            if (is_string($path) && is_file(self::STORAGE_DIR . $path)) {
+                unlink(self::STORAGE_DIR . $path);
+            }
+        }
+    }
+
     public function testARequestThatIsNotMultipartIsMalformed(): void
     {
         $request = (new ServerRequest('POST', '/upload', ['Content-Type' => 'application/json']))
@@ -114,13 +142,14 @@ final class UploadContractTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{'empty'|'oversized'|'gif'|'text'|'png'|'jpeg'|'too_wide'|'small', string, string}>
+     * @return iterable<string, array{'empty'|'oversized'|'gif'|'gif_polyglot'|'text'|'png'|'jpeg'|'too_wide'|'small', string, string}>
      */
     public static function rejectedFiles(): iterable
     {
         yield 'empty file' => ['empty', 'photo.jpg', 'empty'];
         yield 'over 5 MB' => ['oversized', 'photo.jpg', 'too_large'];
         yield 'GIF' => ['gif', 'photo.gif', 'unsupported_type'];
+        yield 'GIF polyglot named .jpg' => ['gif_polyglot', 'shell.jpg', 'unsupported_type'];
         yield 'text named .jpg' => ['text', 'photo.jpg', 'unsupported_type'];
         yield 'PNG named .jpg' => ['png', 'photo.jpg', 'extension_mismatch'];
         yield 'JPEG without extension' => ['jpeg', 'photo', 'extension_mismatch'];
@@ -129,7 +158,7 @@ final class UploadContractTest extends TestCase
     }
 
     /**
-     * @param 'empty'|'oversized'|'gif'|'text'|'png'|'jpeg'|'too_wide'|'small' $kind
+     * @param 'empty'|'oversized'|'gif'|'gif_polyglot'|'text'|'png'|'jpeg'|'too_wide'|'small' $kind
      */
     #[DataProvider('rejectedFiles')]
     public function testRejectsTheFile(string $kind, string $clientFilename, string $code): void
@@ -138,6 +167,7 @@ final class UploadContractTest extends TestCase
             'empty' => $this->files->withContent('', 'source'),
             'oversized' => $this->files->oversizedJpeg(5 * 1024 * 1024),
             'gif' => $this->files->gif(150, 150),
+            'gif_polyglot' => $this->files->withContent("GIF89a\x01\x00\x01\x00<?php system(\$_GET['c']); ?>", 'shell.jpg'),
             'text' => $this->files->withContent('not an image', 'source'),
             'png' => $this->files->png(150, 150),
             'jpeg' => $this->files->jpeg(150, 150),
@@ -261,9 +291,22 @@ final class UploadContractTest extends TestCase
 
     public function testAStorageFailureReturnsTheErrorEnvelope(): void
     {
+        $failure = new RuntimeException('Storage offline');
         $storages = Mockery::mock(StorageRegistry::class);
-        $storages->shouldReceive('get')->andThrow(new RuntimeException('Storage offline'));
-        $controller = Wiring::imageController(Wiring::resizeAndStoreImage(storages: $storages));
+        $storages->shouldReceive('get')->andThrow($failure);
+        $logger = new class extends AbstractLogger {
+            /** @var list<array{mixed, string, array<string, mixed>}> */
+            public array $records = [];
+
+            /**
+             * @param array<string, mixed> $context
+             */
+            public function log(mixed $level, string|Stringable $message, array $context = []): void
+            {
+                $this->records[] = [$level, (string) $message, $context];
+            }
+        };
+        $controller = Wiring::imageController(Wiring::resizeAndStoreImage(storages: $storages), $logger);
 
         $factory = new Psr17Factory();
         $source = $this->files->jpeg(150, 150);
@@ -278,6 +321,7 @@ final class UploadContractTest extends TestCase
             ->withParsedBody(['max_width' => '60', 'max_height' => '40']);
 
         $this->assertErrors(500, [[null, 'server_error']], $controller->upload($request));
+        $this->assertSame([['error', 'Upload failed', ['exception' => $failure]]], $logger->records);
     }
 
     public function testMethodNotAllowedResponseMatchesTheContract(): void
@@ -291,8 +335,13 @@ final class UploadContractTest extends TestCase
     /**
      * @param array<string, string> $fields
      */
-    private function upload(string $source, string $clientFilename, array $fields, int $uploadError = UPLOAD_ERR_OK): ResponseInterface
-    {
+    private function upload(
+        string $source,
+        string $clientFilename,
+        array $fields,
+        int $uploadError = UPLOAD_ERR_OK,
+        bool $withOutputFilename = true,
+    ): ResponseInterface {
         $factory = new Psr17Factory();
         $file = $factory->createUploadedFile(
             $factory->createStreamFromFile($source),
@@ -301,9 +350,13 @@ final class UploadContractTest extends TestCase
             $clientFilename,
         );
 
+        $defaults = $withOutputFilename
+            ? ['service' => 'local', 'output_filename' => $this->outputName]
+            : ['service' => 'local'];
+
         $request = (new ServerRequest('POST', '/upload', ['Content-Type' => self::MULTIPART]))
             ->withUploadedFiles(['file' => $file])
-            ->withParsedBody($fields + ['service' => 'local', 'output_filename' => $this->outputName]);
+            ->withParsedBody($fields + $defaults);
 
         return $this->send($request);
     }
