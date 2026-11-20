@@ -15,6 +15,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Log\AbstractLogger;
 use RuntimeException;
 use Stringable;
+use Tests\Support\StoredFiles;
 use Tests\Support\TestFiles;
 use Tests\Support\Wiring;
 
@@ -26,7 +27,6 @@ final class UploadContractTest extends TestCase
     use MatchesContract;
     use MockeryPHPUnitIntegration;
 
-    private const STORAGE_DIR = __DIR__ . '/../../storage/';
     private const MULTIPART = 'multipart/form-data; boundary=contract';
 
     private TestFiles $files;
@@ -41,9 +41,7 @@ final class UploadContractTest extends TestCase
     protected function tearDown(): void
     {
         $this->files->remove();
-        foreach (glob(self::STORAGE_DIR . $this->outputName . '*') ?: [] as $stored) {
-            unlink($stored);
-        }
+        StoredFiles::remove($this->outputName);
     }
 
     /**
@@ -73,7 +71,7 @@ final class UploadContractTest extends TestCase
         $storedName = $this->outputName . '_v1.' . $extension;
         $this->assertSame(200, $response->getStatusCode());
         $this->assertSame($storedName, $this->json($response)['path']);
-        $size = getimagesize(self::STORAGE_DIR . $storedName);
+        $size = getimagesize(StoredFiles::path($storedName));
         $this->assertNotFalse($size);
         $this->assertSame([60, 40, $imageType], [$size[0], $size[1], $size[2]]);
     }
@@ -115,11 +113,11 @@ final class UploadContractTest extends TestCase
             $this->assertSame(200, $response->getStatusCode());
             $this->assertIsString($path);
             $this->assertMatchesRegularExpression('/^resized_shell_[a-z0-9]{13}_v1\.jpg$/', $path);
-            $this->assertFileExists(self::STORAGE_DIR . $path);
+            $this->assertFileExists(StoredFiles::path($path));
             $this->assertSame($publicBefore, scandir($publicDir));
         } finally {
-            if (is_string($path) && is_file(self::STORAGE_DIR . $path)) {
-                unlink(self::STORAGE_DIR . $path);
+            if (is_string($path)) {
+                StoredFiles::remove($path);
             }
         }
     }
@@ -178,7 +176,7 @@ final class UploadContractTest extends TestCase
         $response = $this->upload($source, $clientFilename, ['max_width' => '60', 'max_height' => '40']);
 
         $this->assertErrors(422, [['file', $code]], $response);
-        $this->assertSame([], glob(self::STORAGE_DIR . $this->outputName . '*'));
+        $this->assertSame([], StoredFiles::matching($this->outputName));
     }
 
     public function testAFileOverThePhpUploadLimitIsTooLarge(): void
