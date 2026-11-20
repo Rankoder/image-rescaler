@@ -51,7 +51,13 @@ final readonly class InputDirectory implements ImageLibrary
 
     public function addWithinLimit(string $sourcePath, string $name, int $limit): ImageAddOutcome
     {
-        return $this->addWithOptionalLimit($sourcePath, $name, $limit);
+        try {
+            return $this->addWithOptionalLimit($sourcePath, $name, $limit);
+        } finally {
+            if (is_file($sourcePath)) {
+                unlink($sourcePath);
+            }
+        }
     }
 
     private function addWithOptionalLimit(string $sourcePath, string $name, ?int $limit): ImageAddOutcome

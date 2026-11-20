@@ -65,13 +65,7 @@ final readonly class InputImages
         $filename = $baseName . '.' . $format->extension();
 
         $reencodedPath = $this->reencoder->reencode($sourceFile->path, $format);
-        try {
-            $outcome = $this->library->addWithinLimit($reencodedPath, $filename, self::MAX_IMAGES);
-        } finally {
-            if (is_file($reencodedPath)) {
-                unlink($reencodedPath);
-            }
-        }
+        $outcome = $this->library->addWithinLimit($reencodedPath, $filename, self::MAX_IMAGES);
 
         if ($outcome === ImageAddOutcome::AlreadyExists) {
             throw new ValidationFailed([new ValidationError(

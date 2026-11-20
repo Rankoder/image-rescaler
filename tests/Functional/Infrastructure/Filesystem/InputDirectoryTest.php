@@ -11,6 +11,7 @@ use App\Infrastructure\Filesystem\ExclusiveCopy;
 use App\Infrastructure\Filesystem\InputDirectory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Tests\Support\TestFiles;
 
 final class InputDirectoryTest extends TestCase
@@ -147,5 +148,22 @@ final class InputDirectoryTest extends TestCase
         $this->assertSame(ImageAddOutcome::Added, $directory->addWithinLimit($second, 'two.jpg', 2));
         $this->assertSame(ImageAddOutcome::LimitReached, $directory->addWithinLimit($third, 'three.jpg', 2));
         $this->assertSame(['one.jpg', 'two.jpg'], $directory->names());
+        $this->assertFileDoesNotExist($first);
+        $this->assertFileDoesNotExist($second);
+        $this->assertFileDoesNotExist($third);
+    }
+
+    public function testRemovesTheTemporaryFileEvenWhenStoringFails(): void
+    {
+        $temporary = $this->outside->withContent('image', 'temp.jpg');
+        $blocked = $this->outside->withContent('a file where the directory should be', 'blocked');
+        $directory = new InputDirectory($blocked . '/input', new ExclusiveCopy());
+
+        try {
+            @$directory->addWithinLimit($temporary, 'photo.jpg', 10);
+            $this->fail('Storing into a path blocked by a file succeeded.');
+        } catch (RuntimeException) {
+            $this->assertFileDoesNotExist($temporary);
+        }
     }
 }
