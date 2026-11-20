@@ -26,7 +26,7 @@ final readonly class JsonResponses
     {
         return $this->responseFactory->createResponse($status)
             ->withHeader('Content-Type', 'application/json')
-            ->withBody($this->streamFactory->createStream(json_encode($body, JSON_THROW_ON_ERROR)));
+            ->withBody($this->streamFactory->createStream(json_encode($body, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)));
     }
 
     /**

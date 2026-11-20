@@ -71,6 +71,17 @@ final class UploadContractTest extends TestCase
         $this->assertSame([60, 40, $imageType], [$size[0], $size[1], $size[2]]);
     }
 
+    public function testSuccessResponseDoesNotEscapeSlashesInUrl(): void
+    {
+        $response = $this->upload($this->files->jpeg(150, 150), 'photo.jpg', ['max_width' => '60', 'max_height' => '40']);
+
+        $storedName = $this->outputName . '_v1.jpg';
+        $rawBody = (string) $response->getBody();
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertStringContainsString('"url":"http://localhost:8080/files/' . $storedName . '"', $rawBody);
+        $this->assertStringNotContainsString('\/', $rawBody);
+    }
+
     public function testASecondUploadUnderTheSameNameDoesNotOverwriteTheFirst(): void
     {
         $this->upload($this->files->jpeg(150, 150, 'first.jpg'), 'photo.jpg', ['max_width' => '60', 'max_height' => '40']);
