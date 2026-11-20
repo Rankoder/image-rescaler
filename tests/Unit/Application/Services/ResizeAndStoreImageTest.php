@@ -12,10 +12,7 @@ use App\Application\Validation\NameRule;
 use App\Application\Validation\ResizeInput;
 use App\Application\Validation\ResizeRequestValidator;
 use App\Application\Validation\SourceFile;
-use App\Domain\Enums\ImageAddOutcome;
 use App\Domain\Enums\StorageType;
-use App\Domain\Interfaces\ImageInspector;
-use App\Domain\Interfaces\ImageLibrary;
 use App\Domain\Interfaces\ImageResizer;
 use App\Domain\Interfaces\StorageRegistry;
 use App\Domain\Interfaces\StorageServiceInterface;
@@ -25,6 +22,8 @@ use Closure;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use Tests\Support\FakeImageInspector;
+use Tests\Support\InMemoryImageLibrary;
 
 final class ResizeAndStoreImageTest extends TestCase
 {
@@ -120,37 +119,12 @@ final class ResizeAndStoreImageTest extends TestCase
                 return new ImageValueObject('/tmp/' . $filename, $filename);
             }
         };
-        $inspector = new readonly class implements ImageInspector {
-            public function sizeInBytes(string $path): int
-            {
-                return 1000;
-            }
-
-            public function inspect(string $path): ImageInfo
-            {
-                return new ImageInfo('image/jpeg', 300, 200);
-            }
-        };
-
-        $library = new readonly class implements ImageLibrary {
-            public function names(): array
-            {
-                return [];
-            }
-
-            public function path(string $name): ?string
-            {
-                return null;
-            }
-
-            public function addWithinLimit(string $sourcePath, string $name, int $limit): ImageAddOutcome
-            {
-                return ImageAddOutcome::Added;
-            }
-        };
-
         return new ResizeAndStoreImage(
-            new ResizeRequestValidator(new ImageFileRules($inspector), new NameRule(), $library),
+            new ResizeRequestValidator(
+                new ImageFileRules(new FakeImageInspector(image: new ImageInfo('image/jpeg', 300, 200))),
+                new NameRule(),
+                new InMemoryImageLibrary(),
+            ),
             new OutputFilename(),
             $resizer,
             $storages,
