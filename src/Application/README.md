@@ -42,6 +42,6 @@ The limits these classes check and the error codes they return are part of the H
 
 ## How to test
 
-- Unit tests; where a class needs a port, the test passes an anonymous class implementing it: `tests/Unit/Application/Services` (`InputImagesTest`, `OutputFilenameTest`) and `tests/Unit/Application/Validation` (`ResizeRequestValidatorTest`, which also covers `ImageFileRules` and `NameRule`).
+- Unit tests; where a class needs a port, the test passes an anonymous class or a fake from `tests/Support` (`FakeImageInspector`, `InMemoryImageLibrary`): `tests/Unit/Application/Services` (`InputImagesTest`, `OutputFilenameTest`, `ResizeAndStoreImageTest`) and `tests/Unit/Application/Validation` (`ResizeRequestValidatorTest`, which also covers `ImageFileRules` and `NameRule`).
 - `docker compose exec web composer test:unit` runs them; the dependency rules are checked by `docker compose exec web composer phpstan`.
 - Before a PR: `docker compose exec web composer check`.

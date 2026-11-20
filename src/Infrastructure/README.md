@@ -49,9 +49,9 @@ The HTTP contract (paths, fields, limits, error codes) is `openapi.yaml`.
 
 | Suite | Location | Command |
 |---|---|---|
-| Unit | `tests/Unit/Infrastructure` (`Config`, `Controllers`, `Http`, `Storage`) | `docker compose exec web composer test:unit` |
-| Functional | `tests/Functional/Infrastructure` (`Container`, controllers, filesystem, image, storage with mocked S3 and Dropbox clients), `tests/Functional/RoutesTest.php`, `tests/Functional/UploadAttemptsTest.php` | `docker compose exec web composer test:functional` |
-| Integration | `tests/Integration`: upload into local storage, parallel uploads, `ResizeCommand` | `docker compose exec web composer test:integration` |
+| Unit | `tests/Unit/Infrastructure` (`Config`, `Http`, `Storage`) | `docker compose exec web composer test:unit` |
+| Functional | `tests/Functional/Infrastructure` (`Container`, filesystem, image, storage with mocked S3 and Dropbox clients), `tests/Functional/RoutesTest.php` | `docker compose exec web composer test:functional` |
+| Integration | `tests/Integration`: parallel uploads, `ResizeCommand` | `docker compose exec web composer test:integration` |
 | Contract | `tests/Contract`: responses of `/health`, `/upload`, `/images`, `/files` against `openapi.yaml` | `docker compose exec web composer test:contract` |
 
 - Helpers and the test image: `tests/Support`, `tests/fixtures`.
