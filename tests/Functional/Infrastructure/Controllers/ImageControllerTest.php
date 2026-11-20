@@ -64,7 +64,7 @@ final class ImageControllerTest extends TestCase
 
         $this->assertSame(200, $response->getStatusCode());
         $this->assertSame(
-            '{"status":"success","path":"thumbnail_v1.jpg","url":"https:\/\/storage.test\/thumbnail_v1.jpg"}',
+            '{"status":"success","path":"thumbnail_v1.jpg","url":"https://storage.test/thumbnail_v1.jpg"}',
             (string) $response->getBody(),
         );
     }

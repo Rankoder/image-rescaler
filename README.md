@@ -21,7 +21,7 @@ Check that it responds:
 
 ```sh
 curl -X POST http://localhost:8080/upload
-# {"status":"error","errors":[{"field":null,"code":"malformed_request","message":"The request must be multipart\/form-data."}]}
+# {"status":"error","errors":[{"field":null,"code":"malformed_request","message":"The request must be multipart/form-data."}]}
 ```
 
 PHP errors and warnings are never shown in responses; they go to the container log:
