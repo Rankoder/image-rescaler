@@ -280,6 +280,14 @@ final class UploadContractTest extends TestCase
         $this->assertErrors(500, [[null, 'server_error']], $controller->upload($request));
     }
 
+    public function testMethodNotAllowedResponseMatchesTheContract(): void
+    {
+        $response = Wiring::container()->jsonResponses()->methodNotAllowed();
+
+        $this->assertSame('GET, POST, HEAD', $response->getHeaderLine('Allow'));
+        $this->assertErrors(405, [[null, 'method_not_allowed']], $response);
+    }
+
     /**
      * @param array<string, string> $fields
      */

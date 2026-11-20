@@ -57,6 +57,12 @@ final readonly class JsonResponses
         return $this->error(404, 'not_found', 'Not found.');
     }
 
+    public function methodNotAllowed(): ResponseInterface
+    {
+        return $this->error(405, 'method_not_allowed', 'Method not allowed.')
+            ->withHeader('Allow', 'GET, POST, HEAD');
+    }
+
     public function serverError(): ResponseInterface
     {
         return $this->error(500, 'server_error', 'The image could not be processed or stored.');

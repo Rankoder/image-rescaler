@@ -39,6 +39,22 @@ final class JsonResponsesTest extends TestCase
         );
     }
 
+    public function testMethodNotAllowedUsesTheErrorEnvelopeAndAllowHeader(): void
+    {
+        $factory = new Psr17Factory();
+        $responses = new JsonResponses($factory, $factory);
+
+        $response = $responses->methodNotAllowed();
+
+        $this->assertSame(405, $response->getStatusCode());
+        $this->assertSame('application/json', $response->getHeaderLine('Content-Type'));
+        $this->assertSame('GET, POST, HEAD', $response->getHeaderLine('Allow'));
+        $this->assertSame(
+            '{"status":"error","errors":[{"field":null,"code":"method_not_allowed","message":"Method not allowed."}]}',
+            (string) $response->getBody(),
+        );
+    }
+
     public function testServerErrorUsesTheErrorEnvelope(): void
     {
         $factory = new Psr17Factory();

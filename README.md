@@ -76,7 +76,7 @@ The limits of the API (types, size, dimensions) are fixed by the contract, not b
 
 The contract is [openapi.yaml](openapi.yaml) (OpenAPI 3.0): fields, limits, responses and error codes. Contract tests check the responses against it.
 
-Any other path returns `404` with `{"status": "error", "errors": [{"field": null, "code": "not_found", "message": "Not found."}]}`.
+Any other path returns `404` with `{"status": "error", "errors": [{"field": null, "code": "not_found", "message": "Not found."}]}`. Any HTTP method other than `GET`, `POST` and `HEAD` returns `405` with `Allow: GET, POST, HEAD` and `{"status": "error", "errors": [{"field": null, "code": "method_not_allowed", "message": "Method not allowed."}]}`.
 
 ### `GET /health`
 

@@ -21,10 +21,10 @@ Both read `getenv()` once and pass it to `AppConfig::fromEnvironment()`; no clas
 | | `ImageController` | `POST /upload` → `ResizeAndStoreImage` |
 | | `ImagesController` | `GET /images`, `POST /images` → `InputImages` |
 | | `FileController` | `GET /files/{name}`: serves images stored with the local service |
-| | `NotFoundController` | every route and method not matched above |
+| | `NotFoundController` | every route not matched above |
 | `Cli/` | `ResizeCommand` | `bin/resize -f <file in the input directory> -w <max_width> -h <max_height> [-s <service>] [-o <output_filename>]` |
 | `Http/` | `MultipartRequest` | reads a multipart form: fields, the file as a `SourceFile`, unreadable requests |
-| | `JsonResponses` | JSON responses in the shapes `openapi.yaml` defines (validation, malformed request, not found, server error) |
+| | `JsonResponses` | JSON responses in the shapes `openapi.yaml` defines (validation, malformed request, not found, method not allowed, server error) |
 | `Filesystem/` | `InputDirectory` | `ImageLibrary` adapter; rejects names that resolve outside the input directory |
 | | `ExclusiveCopy` | copies a file to a name only if it is free, never exposing a partial file |
 | `Image/` | `LocalImageInspector` | `ImageInspector` adapter: size, MIME type and dimensions from content |
