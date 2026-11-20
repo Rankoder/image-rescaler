@@ -26,6 +26,7 @@ final class FilesContractTest extends TestCase
         $this->stored = $this->storage->jpeg(60, 40, 'thumb_v1.jpg');
         mkdir($this->storage->directory() . '/input');
         $this->storage->withContent('not served', 'notes.txt');
+        $this->storage->withContent('partial', '.0123456789abcdef-thumb_v1.jpg');
 
         $factory = new Psr17Factory();
         $this->controller = new FileController(
@@ -60,6 +61,7 @@ final class FilesContractTest extends TestCase
         yield 'input directory' => ['input'];
         yield 'parent directory' => ['../README.md'];
         yield 'other extension' => ['notes.txt'];
+        yield 'partial file' => ['.0123456789abcdef-thumb_v1.jpg'];
     }
 
     #[DataProvider('namesNotServed')]
