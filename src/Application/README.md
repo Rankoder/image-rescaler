@@ -1,6 +1,6 @@
 # Application
 
-The use cases shared by HTTP and the CLI and the one validation of their input. It works on plain values and Domain ports; reading requests, files and the environment is left to Infrastructure.
+The use cases shared by HTTP and the CLI and the one validation of their input. It works on plain values and Domain ports; reading requests, image files and the environment is left to Infrastructure (the one exception: `InputImages` removes the temporary re-encoded file itself).
 
 ## Public API
 
@@ -38,10 +38,10 @@ The limits these classes check and the error codes they return are part of the H
   - a class implementing a `App\Domain\Interfaces` port, since that makes it an adapter (`test_application_holds_no_adapter`),
   - a class named `*Controller` or `*Command` (`test_application_holds_no_entry_point`).
 - Calls to I/O functions are outside the rules' reach and stay with code review.
-- Used by: Infrastructure (controllers, `ResizeCommand`, `Container`, and the adapters that build `SourceFile` and `ValidationError`).
+- Used by: Infrastructure (controllers, `ResizeCommand`, `Container`, and `InputDirectory` and `MultipartRequest`, which build `SourceFile` and `ValidationError`).
 
 ## How to test
 
-- Unit tests, with the ports replaced by anonymous classes in the test: `tests/Unit/Application/Services` (`InputImagesTest`, `OutputFilenameTest`) and `tests/Unit/Application/Validation` (`ResizeRequestValidatorTest`, which also covers `ImageFileRules` and `NameRule`).
+- Unit tests; where a class needs a port, the test passes an anonymous class implementing it: `tests/Unit/Application/Services` (`InputImagesTest`, `OutputFilenameTest`) and `tests/Unit/Application/Validation` (`ResizeRequestValidatorTest`, which also covers `ImageFileRules` and `NameRule`).
 - `docker compose exec web composer test:unit` runs them; the dependency rules are checked by `docker compose exec web composer phpstan`.
 - Before a PR: `docker compose exec web composer check`.

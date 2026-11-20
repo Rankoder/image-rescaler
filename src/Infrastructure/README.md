@@ -32,16 +32,17 @@ Both read `getenv()` once and pass it to `AppConfig::fromEnvironment()`; no clas
 | | `InterventionImageReencoder` | `ImageReencoder` adapter; drops embedded metadata |
 | `Storage/` | `AbstractStorageService` | `StorageServiceInterface` base: stores under the first free `_v<n>` name |
 | | `LocalStorageService`, `S3StorageService`, `DropboxStorageService` | the three storages of `StorageType` |
-| | `LazyStorageRegistry` | `StorageRegistry` adapter; builds a storage only when it is first asked for |
+| | `LazyStorageRegistry` | `StorageRegistry` adapter; builds a storage only when it is asked for, so a missing S3 or Dropbox setting fails only the uploads that use it |
 | `Logging/` | `ErrorLogLogger` | PSR-3 logger writing to PHP's error log (`docker compose logs web`) |
 
 The HTTP contract (paths, fields, limits, error codes) is `openapi.yaml`.
 
 ## Dependencies
 
-- May depend on Domain, Application and vendor packages (AWS SDK, Dropbox client, Intervention Image, bramus/router, Nyholm PSR-7, PSR-3). No phpat rule restricts this layer.
+- May depend on Domain, Application and vendor packages. No phpat rule restricts this layer.
+- Classes here use the AWS SDK, the Dropbox client, Intervention Image, `Psr17Factory` (nyholm/psr7) and PSR-3; the router (bramus/router) and `ServerRequestCreator` (nyholm/psr7-server) are used only in `routes.php`.
 - Adapters implementing a Domain port belong here, as do controllers and commands; the rules in `tests/Architecture/LayerDependencyTest.php` keep them out of Application.
-- Some adapters use Application value types: `InputDirectory` and `MultipartRequest` build `SourceFile` with `ErrorCode` and `Field`.
+- Some classes use Application value types: `InputDirectory` (adapter) and `MultipartRequest` build `SourceFile` with `ErrorCode` and `Field`; `MultipartRequest` also builds `ValidationError`.
 - Scripts without a class (`routes.php`, `bin/resize`) and calls to I/O functions are outside the phpat rules and stay with code review.
 
 ## How to test
