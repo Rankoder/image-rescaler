@@ -22,7 +22,7 @@ interface ImageLibrary
     public function path(string $name): ?string;
 
     /**
-     * Adds the file under the name unless an image of that name exists or the limit is reached.
+     * Adds the temporary file under the name unless an image of that name exists or the limit is reached, and removes the temporary file.
      */
     public function addWithinLimit(string $sourcePath, string $name, int $limit): ImageAddOutcome;
 }

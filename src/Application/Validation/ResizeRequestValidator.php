@@ -6,6 +6,7 @@ namespace App\Application\Validation;
 
 use App\Domain\Enums\StorageType;
 use App\Domain\Interfaces\ImageLibrary;
+use App\Domain\ValueObjects\ImageName;
 
 /**
  * The one validation of a resize for every entry point; reports all invalid fields at once.
@@ -14,7 +15,6 @@ final readonly class ResizeRequestValidator
 {
     private const int MIN_FRAME_SIDE = 40;
     private const int MAX_FRAME_SIDE = 5000;
-    private const string IMAGE_NAME = '/^[A-Za-z0-9_-]{1,100}\.(jpg|jpeg|png|webp)\z/';
 
     public function __construct(
         private ImageFileRules $fileRules,
@@ -66,7 +66,8 @@ final readonly class ResizeRequestValidator
         }
 
         // Only a plain image name counts; ../, absolute paths and hidden files are simply not found
-        $path = preg_match(self::IMAGE_NAME, $image) === 1 ? $this->library->path($image) : null;
+        $imageName = ImageName::tryFrom($image);
+        $path = $imageName === null ? null : $this->library->path($imageName->value);
 
         return $path === null
             ? SourceFile::rejected(ErrorCode::NotFound, $image, Field::Image)

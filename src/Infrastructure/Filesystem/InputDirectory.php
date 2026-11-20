@@ -9,6 +9,7 @@ use App\Application\Validation\Field;
 use App\Application\Validation\SourceFile;
 use App\Domain\Enums\ImageAddOutcome;
 use App\Domain\Interfaces\ImageLibrary;
+use App\Domain\ValueObjects\ImageName;
 use RuntimeException;
 
 /**
@@ -16,8 +17,6 @@ use RuntimeException;
  */
 final readonly class InputDirectory implements ImageLibrary
 {
-    private const string IMAGE_NAME = '/^[A-Za-z0-9_-]{1,100}\.(jpg|jpeg|png|webp)\z/';
-
     public function __construct(
         private string $path,
         private ExclusiveCopy $copy,
@@ -31,7 +30,7 @@ final readonly class InputDirectory implements ImageLibrary
 
         $names = array_values(array_filter(
             scandir($this->path) ?: [],
-            fn(string $name): bool => self::isImageName($name) && is_file($this->path . '/' . $name),
+            fn(string $name): bool => ImageName::isValid($name) && is_file($this->path . '/' . $name),
         ));
         sort($names);
 
@@ -45,48 +44,39 @@ final readonly class InputDirectory implements ImageLibrary
         return $source->problem === null ? $source->path : null;
     }
 
-    public function addIfAbsent(string $sourcePath, string $name): bool
-    {
-        return $this->addWithOptionalLimit($sourcePath, $name, null) === ImageAddOutcome::Added;
-    }
-
     public function addWithinLimit(string $sourcePath, string $name, int $limit): ImageAddOutcome
     {
-        return $this->addWithOptionalLimit($sourcePath, $name, $limit);
-    }
-
-    private function addWithOptionalLimit(string $sourcePath, string $name, ?int $limit): ImageAddOutcome
-    {
-        if (!is_dir($this->path) && !mkdir($this->path, 0777, true) && !is_dir($this->path)) {
-            throw new RuntimeException(sprintf('Directory "%s" was not created', $this->path));
-        }
-
-        $lock = fopen($this->path . '/.lock', 'c');
-        if ($lock === false) {
-            throw new RuntimeException(sprintf('Cannot open lock file in "%s"', $this->path));
-        }
-
         try {
-            if (!flock($lock, LOCK_EX)) {
-                throw new RuntimeException(sprintf('Cannot lock directory "%s"', $this->path));
+            if (!is_dir($this->path) && !mkdir($this->path, 0777, true) && !is_dir($this->path)) {
+                throw new RuntimeException(sprintf('Directory "%s" was not created', $this->path));
             }
 
-            if ($limit !== null && count($this->names()) >= $limit) {
-                return ImageAddOutcome::LimitReached;
+            $lock = fopen($this->path . '/.lock', 'c');
+            if ($lock === false) {
+                throw new RuntimeException(sprintf('Cannot open lock file in "%s"', $this->path));
             }
 
-            return $this->copy->create($sourcePath, $this->path, $name)
-                ? ImageAddOutcome::Added
-                : ImageAddOutcome::AlreadyExists;
+            try {
+                if (!flock($lock, LOCK_EX)) {
+                    throw new RuntimeException(sprintf('Cannot lock directory "%s"', $this->path));
+                }
+
+                if (count($this->names()) >= $limit) {
+                    return ImageAddOutcome::LimitReached;
+                }
+
+                return $this->copy->create($sourcePath, $this->path, $name)
+                    ? ImageAddOutcome::Added
+                    : ImageAddOutcome::AlreadyExists;
+            } finally {
+                flock($lock, LOCK_UN);
+                fclose($lock);
+            }
         } finally {
-            flock($lock, LOCK_UN);
-            fclose($lock);
+            if (is_file($sourcePath)) {
+                unlink($sourcePath);
+            }
         }
-    }
-
-    public static function isImageName(string $name): bool
-    {
-        return preg_match(self::IMAGE_NAME, $name) === 1;
     }
 
     public function sourceFile(string $name, Field $field = Field::File): SourceFile
@@ -98,6 +88,9 @@ final readonly class InputDirectory implements ImageLibrary
         if (str_starts_with($name, '/') || in_array('..', explode('/', $name), true)) {
             return SourceFile::rejected(ErrorCode::OutsideInputDirectory, $name, $field);
         }
+        if (!ImageName::isValid($name)) {
+            return SourceFile::rejected(ErrorCode::NotFound, $name, $field);
+        }
 
         $path = realpath($root . '/' . $name);
         if ($path === false || !is_file($path)) {
@@ -108,6 +101,6 @@ final readonly class InputDirectory implements ImageLibrary
             return SourceFile::rejected(ErrorCode::OutsideInputDirectory, $name, $field);
         }
 
-        return SourceFile::at($path, basename($name), $field);
+        return SourceFile::at($path, $name, $field);
     }
 }

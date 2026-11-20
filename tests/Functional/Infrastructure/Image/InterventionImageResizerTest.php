@@ -72,11 +72,11 @@ final class InterventionImageResizerTest extends TestCase
         $first = $resizer->cover($source, 40, 40, 'thumb.png');
         $second = $resizer->cover($source, 40, 40, 'thumb.png');
 
-        $this->assertNotSame($first->getPath(), $second->getPath());
-        $this->assertSame(['thumb.png', 'thumb.png'], [$first->getFilename(), $second->getFilename()]);
-        $this->assertStringEndsWith('-thumb.png', $first->getPath());
-        $this->assertFileExists($first->getPath());
-        $this->assertFileExists($second->getPath());
+        $this->assertNotSame($first->path, $second->path);
+        $this->assertSame(['thumb.png', 'thumb.png'], [$first->filename, $second->filename]);
+        $this->assertStringEndsWith('-thumb.png', $first->path);
+        $this->assertFileExists($first->path);
+        $this->assertFileExists($second->path);
     }
 
     private function resize(string $source, ImageFormat $format, int $width, int $height): string
@@ -86,9 +86,9 @@ final class InterventionImageResizerTest extends TestCase
 
         $result = $resizer->cover($source, $width, $height, $filename);
 
-        $this->assertSame($filename, $result->getFilename());
+        $this->assertSame($filename, $result->filename);
 
-        return $result->getPath();
+        return $result->path;
     }
 
     /**

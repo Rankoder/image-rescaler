@@ -71,6 +71,16 @@ final class ResizeCommandTest extends TestCase
         $this->assertStringStartsWith("-f: The file must be inside the input directory.\n", $errors);
     }
 
+    public function testRejectsAFileWhoseNameIsNotAPlainImageInTheDirectory(): void
+    {
+        $this->files->jpeg(150, 150, '.0123-hidden.jpg');
+
+        [$exitCode, , $errors] = $this->runCommand(['f' => '.0123-hidden.jpg', 'w' => '60', 'h' => '40']);
+
+        $this->assertSame(1, $exitCode);
+        $this->assertStringStartsWith("-f: The image does not exist in the input directory.\n", $errors);
+    }
+
     /**
      * @param array<string, string> $options
      * @return array{int, string, string}
