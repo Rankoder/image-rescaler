@@ -12,7 +12,11 @@ final class RoutesTest extends TestCase
     #[RunInSeparateProcess]
     public function testAnUnknownPathGetsAJsonNotFound(): void
     {
-        $this->assertSame('{"status":"error","message":"Not found"}', $this->dispatch('GET', '/nope'));
+        $this->assertSame(
+            '{"status":"error","errors":[{"field":null,"code":"not_found","message":"Not found."}]}',
+            $this->dispatch('GET', '/nope'),
+        );
+        $this->assertSame(404, http_response_code());
     }
 
     #[RunInSeparateProcess]
@@ -23,7 +27,10 @@ final class RoutesTest extends TestCase
         });
 
         try {
-            $this->assertSame('{"status":"error","message":"Not found"}', $this->dispatch('PUT', '/upload'));
+            $this->assertSame(
+                '{"status":"error","errors":[{"field":null,"code":"not_found","message":"Not found."}]}',
+                $this->dispatch('PUT', '/upload'),
+            );
         } finally {
             restore_error_handler();
         }

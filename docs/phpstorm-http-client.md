@@ -34,6 +34,6 @@ Before you start: the container must be running (`docker compose up -d`).
 | List the images in the input directory | `200`, the sample images among them |
 | Crop a sample image from the input directory | `200`, `landscape.jpg` cropped to 200 × 150 and stored as `http_client_sample_v<n>.jpg` |
 | Add the test image to the input directory | `201` with `http_client_added.jpg` on the first run, `422` `already_exists` after that |
-| Unknown route | `404` with `{"status":"error","message":"Not found"}` |
+| Unknown route | `404`, error `not_found` |
 
 Each run of the upload requests adds another file to `storage/`; remove them with `rm storage/http_client_*_v*.*`, and the added image with `rm storage/input/http_client_added.jpg`.

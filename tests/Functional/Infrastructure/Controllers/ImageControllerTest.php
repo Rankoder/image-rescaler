@@ -81,7 +81,10 @@ final class ImageControllerTest extends TestCase
         $response = $this->upload('local', $logger);
 
         $this->assertSame(500, $response->getStatusCode());
-        $this->assertSame('{"status":"error","message":"The image could not be processed or stored."}', (string) $response->getBody());
+        $this->assertSame(
+            '{"status":"error","errors":[{"field":null,"code":"server_error","message":"The image could not be processed or stored."}]}',
+            (string) $response->getBody(),
+        );
     }
 
     public function testAStorageThatCannotBeBuiltFailsBeforeAnyImageIsWritten(): void

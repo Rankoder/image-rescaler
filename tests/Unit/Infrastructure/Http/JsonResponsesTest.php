@@ -23,4 +23,34 @@ final class JsonResponsesTest extends TestCase
         $this->assertSame('{"url":"https://example.com/files/photo_v1.jpg"}', $body);
         $this->assertStringNotContainsString('\/', $body);
     }
+
+    public function testNotFoundUsesTheErrorEnvelope(): void
+    {
+        $factory = new Psr17Factory();
+        $responses = new JsonResponses($factory, $factory);
+
+        $response = $responses->notFound();
+
+        $this->assertSame(404, $response->getStatusCode());
+        $this->assertSame('application/json', $response->getHeaderLine('Content-Type'));
+        $this->assertSame(
+            '{"status":"error","errors":[{"field":null,"code":"not_found","message":"Not found."}]}',
+            (string) $response->getBody(),
+        );
+    }
+
+    public function testServerErrorUsesTheErrorEnvelope(): void
+    {
+        $factory = new Psr17Factory();
+        $responses = new JsonResponses($factory, $factory);
+
+        $response = $responses->serverError();
+
+        $this->assertSame(500, $response->getStatusCode());
+        $this->assertSame('application/json', $response->getHeaderLine('Content-Type'));
+        $this->assertSame(
+            '{"status":"error","errors":[{"field":null,"code":"server_error","message":"The image could not be processed or stored."}]}',
+            (string) $response->getBody(),
+        );
+    }
 }

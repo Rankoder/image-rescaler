@@ -106,7 +106,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ServerError'
+                $ref: '#/components/schemas/ValidationError'
 
   /images:
     get:
@@ -182,7 +182,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ServerError'
+                $ref: '#/components/schemas/ValidationError'
 
   /files/{name}:
     get:
@@ -209,7 +209,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ServerError'
+                $ref: '#/components/schemas/ValidationError'
 
 components:
   schemas:
@@ -272,6 +272,7 @@ components:
             - conflicts_with_file
             - already_exists
             - limit_reached
+            - server_error
           description: |
             - `malformed_request`: the request is not `multipart/form-data` (400, `field` is `null`)
             - `required`: the field is missing
@@ -286,23 +287,12 @@ components:
             - `invalid_characters`: `output_filename` or `name` holds other characters than letters, digits, `-` and `_`
             - `too_long`: `output_filename` or `name` is over 100 characters
             - `unsupported`: `service` is not `local`, `s3` or `dropbox`
-            - `not_found`: `image` names no image in the input directory
+            - `not_found`: `image` names no image in the input directory, or the requested route or file does not exist (404, `field` is `null`)
             - `conflicts_with_file`: both `file` and `image` are given
             - `already_exists`: an image of that `name` is in the input directory already
             - `limit_reached`: the input directory already holds 10 images (`field` is `null`)
+            - `server_error`: processing or storage failed (500, `field` is `null`)
             - `required` for `file` in `POST /upload`: neither `file` nor `image` is given
         message:
           type: string
           example: The image must be at least 200 × 150 px to fill the frame.
-
-    ServerError:
-      type: object
-      required: [status, message]
-      additionalProperties: false
-      properties:
-        status:
-          type: string
-          enum: [error]
-        message:
-          type: string
-          example: The image could not be processed or stored.

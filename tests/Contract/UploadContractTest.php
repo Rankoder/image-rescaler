@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Contract;
 
-use Tests\Support\Wiring;
+use App\Domain\Interfaces\StorageRegistry;
+use Mockery;
+use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\ServerRequest;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
+use RuntimeException;
 use Tests\Support\TestFiles;
+use Tests\Support\Wiring;
 
 /**
  * One case per rule of openapi.yaml; every response is also checked against the contract.
@@ -18,6 +22,7 @@ use Tests\Support\TestFiles;
 final class UploadContractTest extends TestCase
 {
     use MatchesContract;
+    use MockeryPHPUnitIntegration;
 
     private const STORAGE_DIR = __DIR__ . '/../../storage/';
     private const MULTIPART = 'multipart/form-data; boundary=contract';
@@ -252,6 +257,27 @@ final class UploadContractTest extends TestCase
             ['service', 'unsupported'],
             ['output_filename', 'invalid_characters'],
         ], $response);
+    }
+
+    public function testAStorageFailureReturnsTheErrorEnvelope(): void
+    {
+        $storages = Mockery::mock(StorageRegistry::class);
+        $storages->shouldReceive('get')->andThrow(new RuntimeException('Storage offline'));
+        $controller = Wiring::imageController(Wiring::resizeAndStoreImage(storages: $storages));
+
+        $factory = new Psr17Factory();
+        $source = $this->files->jpeg(150, 150);
+        $file = $factory->createUploadedFile(
+            $factory->createStreamFromFile($source),
+            (int) filesize($source),
+            UPLOAD_ERR_OK,
+            'photo.jpg',
+        );
+        $request = (new ServerRequest('POST', '/upload', ['Content-Type' => self::MULTIPART]))
+            ->withUploadedFiles(['file' => $file])
+            ->withParsedBody(['max_width' => '60', 'max_height' => '40']);
+
+        $this->assertErrors(500, [[null, 'server_error']], $controller->upload($request));
     }
 
     /**
