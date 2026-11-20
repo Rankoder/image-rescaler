@@ -97,7 +97,6 @@ final readonly class Container
             $this->resizeAndStoreImage(),
             $this->jsonResponses(),
             $this->config->postMaxSize,
-            $this->logger(),
         );
     }
 
@@ -112,7 +111,6 @@ final readonly class Container
             ),
             $this->jsonResponses(),
             $this->config->postMaxSize,
-            $this->logger(),
         );
     }
 

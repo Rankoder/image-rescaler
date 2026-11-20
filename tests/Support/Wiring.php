@@ -70,7 +70,6 @@ final class Wiring
 
     public static function imageController(
         ?ResizeAndStoreImage $resizeAndStoreImage = null,
-        LoggerInterface $logger = new NullLogger(),
     ): ImageController {
         $container = self::container();
 
@@ -78,7 +77,6 @@ final class Wiring
             $resizeAndStoreImage ?? $container->resizeAndStoreImage(),
             $container->jsonResponses(),
             self::config()->postMaxSize,
-            $logger,
         );
     }
 }
