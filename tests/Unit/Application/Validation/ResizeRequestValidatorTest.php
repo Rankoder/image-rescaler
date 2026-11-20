@@ -12,19 +12,18 @@ use App\Application\Validation\ResizeInput;
 use App\Application\Validation\ResizeRequest;
 use App\Application\Validation\ResizeRequestValidator;
 use App\Application\Validation\SourceFile;
-use App\Application\Validation\ValidationError;
-use App\Application\Validation\ValidationFailed;
 use App\Domain\Enums\ImageFormat;
-use App\Domain\Enums\ImageAddOutcome;
 use App\Domain\Enums\StorageType;
-use App\Domain\Interfaces\ImageInspector;
-use App\Domain\Interfaces\ImageLibrary;
 use App\Domain\ValueObjects\ImageInfo;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Tests\Support\AssertsValidationFailure;
+use Tests\Support\FakeImageInspector;
+use Tests\Support\InMemoryImageLibrary;
 
 final class ResizeRequestValidatorTest extends TestCase
 {
+    use AssertsValidationFailure;
     public function testAValidInputBecomesARequest(): void
     {
         $request = $this->validator(1000, new ImageInfo('image/png', 300, 200))->validate(
@@ -196,15 +195,7 @@ final class ResizeRequestValidatorTest extends TestCase
      */
     private function assertFails(array $expected, ResizeRequestValidator $validator, ResizeInput $input): void
     {
-        try {
-            $validator->validate($input);
-            $this->fail('The input passed validation.');
-        } catch (ValidationFailed $failure) {
-            $this->assertSame(
-                $expected,
-                array_map(static fn(ValidationError $error): array => [$error->field, $error->code], $failure->errors),
-            );
-        }
+        $this->assertValidationFails($expected, static fn() => $validator->validate($input));
     }
 
     /**
@@ -212,36 +203,10 @@ final class ResizeRequestValidatorTest extends TestCase
      */
     private function validator(int $bytes, ?ImageInfo $image, array $library = []): ResizeRequestValidator
     {
-        return new ResizeRequestValidator(new ImageFileRules(new readonly class ($bytes, $image) implements ImageInspector {
-            public function __construct(private int $bytes, private ?ImageInfo $image) {}
-
-            public function sizeInBytes(string $path): int
-            {
-                return $this->bytes;
-            }
-
-            public function inspect(string $path): ?ImageInfo
-            {
-                return $this->image;
-            }
-        }), new NameRule(), new readonly class ($library) implements ImageLibrary {
-            /** @param array<string, string> $images */
-            public function __construct(private array $images) {}
-
-            public function names(): array
-            {
-                return array_keys($this->images);
-            }
-
-            public function path(string $name): ?string
-            {
-                return $this->images[$name] ?? null;
-            }
-
-            public function addWithinLimit(string $sourcePath, string $name, int $limit): ImageAddOutcome
-            {
-                return ImageAddOutcome::Added;
-            }
-        });
+        return new ResizeRequestValidator(
+            new ImageFileRules(new FakeImageInspector($bytes, $image)),
+            new NameRule(),
+            new InMemoryImageLibrary($library),
+        );
     }
 }

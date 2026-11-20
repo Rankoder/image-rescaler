@@ -8,13 +8,12 @@ use App\Infrastructure\Filesystem\ExclusiveCopy;
 use App\Infrastructure\Filesystem\InputDirectory;
 use App\Infrastructure\Cli\ResizeCommand;
 use PHPUnit\Framework\TestCase;
+use Tests\Support\StoredFiles;
 use Tests\Support\TestFiles;
 use Tests\Support\Wiring;
 
 final class ResizeCommandTest extends TestCase
 {
-    private const STORAGE_DIR = __DIR__ . '/../../storage/';
-
     private TestFiles $files;
     private string $outputName;
 
@@ -27,9 +26,7 @@ final class ResizeCommandTest extends TestCase
     protected function tearDown(): void
     {
         $this->files->remove();
-        foreach (glob(self::STORAGE_DIR . $this->outputName . '*') ?: [] as $stored) {
-            unlink($stored);
-        }
+        StoredFiles::remove($this->outputName);
     }
 
     public function testStoresTheImageCroppedToTheFrame(): void
@@ -39,7 +36,7 @@ final class ResizeCommandTest extends TestCase
         [$exitCode, $output, $errors] = $this->runCommand(['f' => 'photo.png', 'w' => '60', 'h' => '40', 'o' => $this->outputName]);
 
         $this->assertSame([0, "Stored {$this->outputName}_v1.png\n", ''], [$exitCode, $output, $errors]);
-        $size = getimagesize(self::STORAGE_DIR . $this->outputName . '_v1.png');
+        $size = getimagesize(StoredFiles::path($this->outputName . '_v1.png'));
         $this->assertNotFalse($size);
         $this->assertSame([60, 40], [$size[0], $size[1]]);
     }
@@ -60,7 +57,7 @@ final class ResizeCommandTest extends TestCase
             . ResizeCommand::USAGE . "\n",
             $errors,
         );
-        $this->assertSame([], glob(self::STORAGE_DIR . $this->outputName . '*'));
+        $this->assertSame([], StoredFiles::matching($this->outputName));
     }
 
     public function testReadsOnlyFromTheInputDirectory(): void

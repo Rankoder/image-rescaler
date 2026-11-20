@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
+use Tests\Support\StoredFiles;
 use Tests\Support\TestFiles;
 
 /**
@@ -17,8 +18,6 @@ use Tests\Support\TestFiles;
 final class ImagesContractTest extends TestCase
 {
     use MatchesContract;
-
-    private const STORAGE_DIR = __DIR__ . '/../../storage/';
 
     private TestFiles $input;
     private TestFiles $files;
@@ -39,9 +38,7 @@ final class ImagesContractTest extends TestCase
         putenv('INPUT_DIR');
         $this->input->remove();
         $this->files->remove();
-        foreach (glob(self::STORAGE_DIR . $this->outputName . '*') ?: [] as $stored) {
-            unlink($stored);
-        }
+        StoredFiles::remove($this->outputName);
     }
 
     #[RunInSeparateProcess]
@@ -189,7 +186,7 @@ final class ImagesContractTest extends TestCase
 
         $this->assertMatchesContract('post', '/upload', $response);
         $this->assertSame(200, $response->getStatusCode());
-        $size = getimagesize(self::STORAGE_DIR . $this->outputName . '_v1.png');
+        $size = getimagesize(StoredFiles::path($this->outputName . '_v1.png'));
         $this->assertNotFalse($size);
         $this->assertSame([60, 40], [$size[0], $size[1]]);
         $this->assertFileExists($this->input->directory() . '/portrait.png');
