@@ -1,6 +1,6 @@
 # Application
 
-The use cases shared by HTTP and the CLI and the one validation of their input. It works on plain values and Domain ports; reading requests, image files and the environment is left to Infrastructure (the one exception: `InputImages` removes the temporary re-encoded file itself).
+The use cases shared by HTTP and the CLI and the one validation of their input. It works on plain values and Domain ports; reading requests, image files and the environment is left to Infrastructure.
 
 ## Public API
 
@@ -31,7 +31,7 @@ The limits these classes check and the error codes they return are part of the H
 
 ## Dependencies
 
-- Uses Domain: the ports `ImageInspector`, `ImageLibrary`, `ImageReencoder`, `ImageResizer`, `StorageRegistry` and the enums.
+- Uses Domain: the ports `ImageInspector`, `ImageLibrary`, `ImageReencoder`, `ImageResizer`, `StorageRegistry`, the value objects and the enums.
 - Forbidden, per `tests/Architecture/LayerDependencyTest.php` (phpat, run by PHPStan):
   - `App\Infrastructure` (`test_application_does_not_depend_on_infrastructure`),
   - packages that do I/O: `Aws`, `Bramus`, `GuzzleHttp`, `Intervention`, `Kunnu`, `Nyholm`, `Psr\Http` (`test_application_reaches_the_outside_world_only_through_adapters`),

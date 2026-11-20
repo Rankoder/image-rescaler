@@ -25,7 +25,7 @@ Both read `getenv()` once and pass it to `AppConfig::fromEnvironment()`; no clas
 | `Cli/` | `ResizeCommand` | `bin/resize -f <file in the input directory> -w <max_width> -h <max_height> [-s <service>] [-o <output_filename>]` |
 | `Http/` | `MultipartRequest` | reads a multipart form: fields, the file as a `SourceFile`, unreadable requests |
 | | `JsonResponses` | JSON responses in the shapes `openapi.yaml` defines (validation, malformed request, not found, method not allowed, server error) |
-| `Filesystem/` | `InputDirectory` | `ImageLibrary` adapter; rejects names that resolve outside the input directory |
+| `Filesystem/` | `InputDirectory` | `ImageLibrary` adapter and `sourceFile()` resolver; accepts only `ImageName` files inside the input directory and removes the temporary file in `addWithinLimit()` |
 | | `ExclusiveCopy` | copies a file to a name only if it is free, never exposing a partial file |
 | `Image/` | `LocalImageInspector` | `ImageInspector` adapter: size, MIME type and dimensions from content |
 | | `InterventionImageResizer` | `ImageResizer` adapter (Intervention Image, GD driver) |

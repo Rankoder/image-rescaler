@@ -17,7 +17,8 @@ The core vocabulary of the application: enums, value objects and the interfaces 
 | Class | Holds |
 |---|---|
 | `ImageInfo` | `mimeType`, `width`, `height` read from the file's content |
-| `ImageValueObject` | `getPath()`, `getFilename()` of an image ready to store |
+| `ImageName` | `value`: plain name of an image in the input directory (`tryFrom()`, `isValid()`) |
+| `ImageValueObject` | `path`, `filename` of an image ready to store |
 
 ### Interfaces (`Interfaces/`)
 
@@ -34,7 +35,7 @@ The core vocabulary of the application: enums, value objects and the interfaces 
 
 - Allowed: `App\Domain` and PHP's standard classes, nothing else. It is a whitelist, so a new package or layer is rejected without changing the rule.
 - Enforced by `test_domain_depends_only_on_itself_and_php` in `tests/Architecture/LayerDependencyTest.php` (phpat, run by PHPStan).
-- Used by: Application (the ports and enums) and Infrastructure (the adapters).
+- Used by: Application (the ports, value objects and enums) and Infrastructure (the adapters).
 
 ## How to test
 
