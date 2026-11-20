@@ -76,7 +76,7 @@ The limits of the API (types, size, dimensions) are fixed by the contract, not b
 
 The contract is [openapi.yaml](openapi.yaml) (OpenAPI 3.0): fields, limits, responses and error codes. Contract tests check the responses against it.
 
-Any other path or method returns `404` with `{"status": "error", "message": "Not found"}`.
+Any other path returns `404` with `{"status": "error", "errors": [{"field": null, "code": "not_found", "message": "Not found."}]}`. Any HTTP method other than `GET`, `POST` and `HEAD` returns `405` with `Allow: GET, POST, HEAD` and `{"status": "error", "errors": [{"field": null, "code": "method_not_allowed", "message": "Method not allowed."}]}`.
 
 ### `GET /health`
 
@@ -125,7 +125,7 @@ Invalid fields return `422` with all errors at once; a request that is not `mult
 ]}
 ```
 
-The codes are listed in [openapi.yaml](openapi.yaml). Processing and storage failures return `500` with `{"status": "error", "message": "The image could not be processed or stored."}`; the details go to the container log (`docker compose logs web`).
+The codes are listed in [openapi.yaml](openapi.yaml). Processing and storage failures return `500` with `{"status": "error", "errors": [{"field": null, "code": "server_error", "message": "The image could not be processed or stored."}]}`; the details go to the container log (`docker compose logs web`).
 
 `url` points to the stored file: for `local` it is served by `GET /files/{name}` below, for `s3` it is the object's URL, for `dropbox` a shared link.
 

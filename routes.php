@@ -49,13 +49,22 @@ $router->get('/files/([^/]+)', function (string $name) use ($container, $emit) {
     $emit($container->fileController()->show($name));
 });
 
-$notFound = function () use ($container, $emit) {
+$router->set404(function () use ($container, $emit) {
     $emit($container->notFoundController()->respond());
-};
+});
 
-// Registered last, so it only catches what no route above matched. It also gives every common
-// method at least one route: bramus/router reads an undefined array key for a method without any.
-$router->all('/.*', $notFound);
-$router->set404($notFound);
+$allowedMethods = ['GET', 'POST', 'HEAD'];
+$method = $_SERVER['REQUEST_METHOD'] ?? '';
+if (
+    !in_array($method, $allowedMethods, true)
+    || ($method === 'POST' && (
+        !in_array($router->getRequestMethod(), $allowedMethods, true)
+        || in_array($_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE'] ?? '', ['PUT', 'DELETE', 'PATCH'], true)
+    ))
+) {
+    $emit($container->jsonResponses()->methodNotAllowed());
+
+    return;
+}
 
 $router->run();

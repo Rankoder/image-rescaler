@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Contract;
 
-use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\TestCase;
 use App\Infrastructure\Controllers\FileController;
 use App\Infrastructure\Controllers\NotFoundController;
+use App\Infrastructure\Http\JsonResponses;
 use Nyholm\Psr7\Factory\Psr17Factory;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
 use Tests\Support\TestFiles;
 
 final class FilesContractTest extends TestCase
@@ -31,7 +32,7 @@ final class FilesContractTest extends TestCase
             $this->storage->directory(),
             $factory,
             $factory,
-            new NotFoundController($factory, $factory),
+            new NotFoundController(new JsonResponses($factory, $factory)),
         );
     }
 
@@ -67,6 +68,10 @@ final class FilesContractTest extends TestCase
         $response = $this->controller->show($name);
 
         $this->assertSame(404, $response->getStatusCode());
+        $this->assertSame(
+            '{"status":"error","errors":[{"field":null,"code":"not_found","message":"Not found."}]}',
+            (string) $response->getBody(),
+        );
         $this->assertMatchesContract('get', '/files/{name}', $response);
     }
 }

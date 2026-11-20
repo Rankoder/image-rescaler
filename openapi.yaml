@@ -7,6 +7,10 @@ info:
     Crops an image to fill the requested frame exactly, without enlarging it, and stores the
     result in local storage, Amazon S3 or Dropbox.
 
+    Any path or method not matched by the routes below returns `404` (`not_found`). Any HTTP
+    method other than `GET`, `POST` and `HEAD` returns `405` (`method_not_allowed`) with
+    `Allow: GET, POST, HEAD`.
+
 servers:
   - url: http://localhost:8080
 
@@ -27,6 +31,8 @@ paths:
                   status:
                     type: string
                     enum: [ok]
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
 
   /upload:
     post:
@@ -93,6 +99,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
         '422':
           description: One or more fields are missing or invalid
           content:
@@ -106,7 +114,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ServerError'
+                $ref: '#/components/schemas/ValidationError'
 
   /images:
     get:
@@ -127,6 +135,8 @@ paths:
                     items:
                       type: string
                     example: [landscape.jpg, portrait.png, square.webp]
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
     post:
       summary: Adds an image to the input directory
       description: |
@@ -171,6 +181,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
         '422':
           description: The file or the name is invalid, or the name is taken
           content:
@@ -182,7 +194,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ServerError'
+                $ref: '#/components/schemas/ValidationError'
 
   /files/{name}:
     get:
@@ -209,9 +221,26 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ServerError'
+                $ref: '#/components/schemas/ValidationError'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
 
 components:
+  responses:
+    MethodNotAllowed:
+      description: The HTTP method is not `GET`, `POST` or `HEAD`
+      headers:
+        Allow:
+          description: The HTTP methods the server accepts
+          required: true
+          schema:
+            type: string
+            enum: ['GET, POST, HEAD']
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+
   schemas:
     Success:
       type: object
@@ -269,9 +298,11 @@ components:
             - too_long
             - unsupported
             - not_found
+            - method_not_allowed
             - conflicts_with_file
             - already_exists
             - limit_reached
+            - server_error
           description: |
             - `malformed_request`: the request is not `multipart/form-data` (400, `field` is `null`)
             - `required`: the field is missing
@@ -286,23 +317,13 @@ components:
             - `invalid_characters`: `output_filename` or `name` holds other characters than letters, digits, `-` and `_`
             - `too_long`: `output_filename` or `name` is over 100 characters
             - `unsupported`: `service` is not `local`, `s3` or `dropbox`
-            - `not_found`: `image` names no image in the input directory
+            - `not_found`: `image` names no image in the input directory, or the requested route or file does not exist (404, `field` is `null`)
+            - `method_not_allowed`: the HTTP method is not `GET`, `POST` or `HEAD` (405, `field` is `null`)
             - `conflicts_with_file`: both `file` and `image` are given
             - `already_exists`: an image of that `name` is in the input directory already
             - `limit_reached`: the input directory already holds 10 images (`field` is `null`)
+            - `server_error`: processing or storage failed (500, `field` is `null`)
             - `required` for `file` in `POST /upload`: neither `file` nor `image` is given
         message:
           type: string
           example: The image must be at least 200 × 150 px to fill the frame.
-
-    ServerError:
-      type: object
-      required: [status, message]
-      additionalProperties: false
-      properties:
-        status:
-          type: string
-          enum: [error]
-        message:
-          type: string
-          example: The image could not be processed or stored.

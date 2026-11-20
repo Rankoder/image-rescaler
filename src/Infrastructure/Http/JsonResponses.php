@@ -49,14 +49,30 @@ final readonly class JsonResponses
 
     public function malformedRequest(string $message): ResponseInterface
     {
-        return $this->json(400, [
-            'status' => 'error',
-            'errors' => [['field' => null, 'code' => 'malformed_request', 'message' => $message]],
-        ]);
+        return $this->error(400, 'malformed_request', $message);
+    }
+
+    public function notFound(): ResponseInterface
+    {
+        return $this->error(404, 'not_found', 'Not found.');
+    }
+
+    public function methodNotAllowed(): ResponseInterface
+    {
+        return $this->error(405, 'method_not_allowed', 'Method not allowed.')
+            ->withHeader('Allow', 'GET, POST, HEAD');
     }
 
     public function serverError(): ResponseInterface
     {
-        return $this->json(500, ['status' => 'error', 'message' => 'The image could not be processed or stored.']);
+        return $this->error(500, 'server_error', 'The image could not be processed or stored.');
+    }
+
+    private function error(int $status, string $code, string $message): ResponseInterface
+    {
+        return $this->json($status, [
+            'status' => 'error',
+            'errors' => [['field' => null, 'code' => $code, 'message' => $message]],
+        ]);
     }
 }

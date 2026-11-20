@@ -64,7 +64,7 @@ final readonly class Container
 
     public function notFoundController(): NotFoundController
     {
-        return new NotFoundController($this->httpFactory, $this->httpFactory);
+        return new NotFoundController($this->jsonResponses());
     }
 
     public function fileController(): FileController
