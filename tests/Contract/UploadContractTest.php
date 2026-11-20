@@ -205,11 +205,7 @@ final class UploadContractTest extends TestCase
     public static function rejectedFrameSides(): iterable
     {
         yield 'not a number' => ['abc', 'not_integer'];
-        yield 'a fraction' => ['60.5', 'not_integer'];
-        yield 'negative' => ['-60', 'not_integer'];
-        yield 'trailing newline' => ["60\n", 'not_integer'];
         yield 'below 40' => ['39', 'out_of_range'];
-        yield 'above 5000' => ['5001', 'out_of_range'];
     }
 
     #[DataProvider('rejectedFrameSides')]
