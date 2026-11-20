@@ -33,6 +33,12 @@ paths:
                     enum: [ok]
         '405':
           $ref: '#/components/responses/MethodNotAllowed'
+        '500':
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
 
   /upload:
     post:
@@ -137,6 +143,12 @@ paths:
                     example: [landscape.jpg, portrait.png, square.webp]
         '405':
           $ref: '#/components/responses/MethodNotAllowed'
+        '500':
+          description: Listing failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
     post:
       summary: Adds an image to the input directory
       description: |
@@ -224,6 +236,12 @@ paths:
                 $ref: '#/components/schemas/ValidationError'
         '405':
           $ref: '#/components/responses/MethodNotAllowed'
+        '500':
+          description: Serving failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
 
 components:
   responses:
