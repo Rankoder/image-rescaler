@@ -6,7 +6,7 @@ Everything that touches the outside world: configuration, wiring, HTTP and CLI e
 
 | Script | Flow |
 |---|---|
-| `public/index.php` | → `routes.php` (bramus/router) → `Container` → controller |
+| `public/index.php` | → `routes.php` → `Container::httpKernel()` → `HttpKernel` → controller |
 | `bin/resize` | → `Container::resizeCommand()` → `ResizeCommand::run()` |
 
 Both read `getenv()` once and pass it to `AppConfig::fromEnvironment()`; no class reads the environment itself.
@@ -23,7 +23,8 @@ Both read `getenv()` once and pass it to `AppConfig::fromEnvironment()`; no clas
 | | `FileController` | `GET /files/{name}`: serves images stored with the local service |
 | | `NotFoundController` | every route not matched above |
 | `Cli/` | `ResizeCommand` | `bin/resize -f <file in the input directory> -w <max_width> -h <max_height> [-s <service>] [-o <output_filename>]` |
-| `Http/` | `MultipartRequest` | reads a multipart form: fields, the file as a `SourceFile`, unreadable requests |
+| `Http/` | `HttpKernel` | PSR-7 dispatcher: method whitelist (`GET`, `POST`, `HEAD`), `X-HTTP-Method-Override` check, `HEAD` body stripping, 5 routes and the central `ValidationFailed` / `Throwable` boundary |
+| | `MultipartRequest` | reads a multipart form: fields, the file as a `SourceFile`, unreadable requests |
 | | `JsonResponses` | JSON responses in the shapes `openapi.yaml` defines (validation, malformed request, not found, method not allowed, server error) |
 | `Filesystem/` | `InputDirectory` | `ImageLibrary` adapter and `sourceFile()` resolver; accepts only `ImageName` files inside the input directory and removes the temporary file in `addWithinLimit()` |
 | | `ExclusiveCopy` | copies a file to a name only if it is free, never exposing a partial file and removing stale partial files left by killed processes |
@@ -40,7 +41,7 @@ The HTTP contract (paths, fields, limits, error codes) is `openapi.yaml`.
 ## Dependencies
 
 - May depend on Domain, Application and vendor packages. No phpat rule restricts this layer.
-- Classes here use the AWS SDK, the Dropbox client, Intervention Image, `Psr17Factory` (nyholm/psr7) and PSR-3; the router (bramus/router) and `ServerRequestCreator` (nyholm/psr7-server) are used only in `routes.php`.
+- Classes here use the AWS SDK, the Dropbox client, Intervention Image, `Psr17Factory` (nyholm/psr7) and PSR-3; `ServerRequestCreator` (nyholm/psr7-server) is used only in `routes.php`.
 - Adapters implementing a Domain port belong here, as do controllers and commands; the rules in `tests/Architecture/LayerDependencyTest.php` keep them out of Application.
 - Some classes use Application value types: `InputDirectory` (adapter) and `MultipartRequest` build `SourceFile` with `ErrorCode` and `Field`; `MultipartRequest` also builds `ValidationError`.
 - Scripts without a class (`routes.php`, `bin/resize`) and calls to I/O functions are outside the phpat rules and stay with code review.
@@ -50,7 +51,7 @@ The HTTP contract (paths, fields, limits, error codes) is `openapi.yaml`.
 | Suite | Location | Command |
 |---|---|---|
 | Unit | `tests/Unit/Infrastructure` (`Config`, `Http`, `Storage`) | `docker compose exec web composer test:unit` |
-| Functional | `tests/Functional/Infrastructure` (`Container`, filesystem, image, storage with mocked S3 and Dropbox clients), `tests/Functional/RoutesTest.php` | `docker compose exec web composer test:functional` |
+| Functional | `tests/Functional/Infrastructure` (`Container`, filesystem, image, storage with mocked S3 and Dropbox clients), `tests/Functional/RoutesTest.php` (`HttpKernel` and `routes.php` smoke test) | `docker compose exec web composer test:functional` |
 | Integration | `tests/Integration`: parallel uploads, `ResizeCommand` | `docker compose exec web composer test:integration` |
 | Contract | `tests/Contract`: responses of `/health`, `/upload`, `/images`, `/files` against `openapi.yaml` | `docker compose exec web composer test:contract` |
 
