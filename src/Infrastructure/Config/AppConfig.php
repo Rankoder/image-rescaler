@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Config;
 
-use InvalidArgumentException;
-
 /**
  * All settings of the application, read once at startup.
  */
@@ -20,11 +18,7 @@ final readonly class AppConfig
         public AwsConfig $aws,
         public string $dropboxAccessToken,
         public string $dropboxDirectory,
-    ) {
-        if (!str_starts_with($dropboxDirectory, '/')) {
-            throw new InvalidArgumentException(sprintf('DROPBOX_DIRECTORY must start with "/", got "%s".', $dropboxDirectory));
-        }
-    }
+    ) {}
 
     /**
      * @param array<string, string> $env as returned by getenv()
