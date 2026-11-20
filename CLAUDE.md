@@ -23,7 +23,7 @@ Plain-PHP REST API and CLI tool that crops images to an exact frame and stores t
 
 ## Code standard
 
-Everything in the repo is in English: code, names, commits, docs.
+Everything in the repo is in English: code, names, commits, docs, PR descriptions, reviews and merge comments.
 
 Kept:
 - `declare(strict_types=1)` in every file,
@@ -40,7 +40,7 @@ Added:
 
 ## Module READMEs
 
-Each module gets its own `README.md` once rebuilt: purpose, public API, dependencies, how to test. Read a module's README before working in it.
+Each module has its own `README.md` (`src/Domain/README.md`, `src/Application/README.md`, `src/Infrastructure/README.md`) covering its purpose, public API, dependencies and how to test. Read a module's README as a map before opening its classes.
 
 ## Guides
 
@@ -49,3 +49,10 @@ Step-by-step instructions (e.g. IDE setup) live in `docs/`, one file per topic. 
 ## Docs stay current
 
 A change that invalidates this file or a README updates it in the same task.
+
+| If you change | Also update |
+|---------------|-------------|
+| HTTP endpoint, parameters or status codes | `openapi.yaml`, `README.md`, `http/api.http` |
+| Environment variable | `.env-example`, `README.md`, application startup |
+| Client-visible behaviour | module `README.md`, contract tests |
+| Composer dependency | `composer.lock`, `prod` image |

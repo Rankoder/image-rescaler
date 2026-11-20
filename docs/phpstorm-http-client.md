@@ -6,17 +6,30 @@ Before you start: the container must be running (`docker compose up -d`).
 
 ## Environments
 
-`http/http-client.env.json` defines where the requests go. The port in each `baseUrl` must be the `APP_PORT` from the `.env` of the copy you want to reach:
+`http/http-client.env.json` defines where the requests go. The port in each `baseUrl` matches the role port block (`APP_PORT` in `.env`) of the copy you want to reach:
 
 | Environment | `baseUrl` | Use for |
 |-------------|-----------|---------|
-| `dev` | `http://localhost:8080` | a copy running on the default `APP_PORT` |
-| `review` | `http://localhost:8081` | a second copy on another `APP_PORT`; change the port if yours differs, see "A second copy next to this one" in the README |
+| `dev` | `http://localhost:8080` | main copy running on the default `APP_PORT` |
+| `code` | `http://localhost:8180` | coding copy using the `81xx` port block (base `8180`) |
+| `review` | `http://localhost:8280` | review copy using the `82xx` port block (base `8280`) |
+
+If your copy runs on another port in its block (e.g. `8181` or `8281`), override `baseUrl` in `http/http-client.private.env.json` (gitignored) instead of editing the shared file:
+
+```json
+{
+  "code": {
+    "baseUrl": "http://localhost:8181"
+  }
+}
+```
+
+Values in `http/http-client.private.env.json` take precedence over `http/http-client.env.json`. See "A second copy next to this one" in the README for running multiple copies side by side.
 
 ## Running the requests
 
 1. Open `http/api.http`.
-2. In the toolbar at the top of the editor, open the environment selector (it shows **No Environment** at first) and choose `dev` or `review`.
+2. In the toolbar at the top of the editor, open the environment selector (it shows **No Environment** at first) and choose `dev`, `code` or `review`.
    For a run configuration, set it in **Run → Edit Configurations → All in api → Environment** instead.
 3. Run one request: click the green arrow in the gutter next to its `###` line.
    Run all of them: click the double arrow (**Run All Requests in File**) in the same toolbar.
