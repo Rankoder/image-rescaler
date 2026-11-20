@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Contract;
 
-use App\Infrastructure\Controllers\HealthController;
-use Nyholm\Psr7\Factory\Psr17Factory;
+use Nyholm\Psr7\ServerRequest;
 use PHPUnit\Framework\TestCase;
+use Tests\Support\Wiring;
 
 final class HealthContractTest extends TestCase
 {
@@ -14,9 +14,7 @@ final class HealthContractTest extends TestCase
 
     public function testHealthAnswersAsTheContractSays(): void
     {
-        $factory = new Psr17Factory();
-
-        $response = (new HealthController($factory, $factory))->check();
+        $response = Wiring::httpKernel()->handle(new ServerRequest('GET', '/health'));
 
         $this->assertSame(200, $response->getStatusCode());
         $this->assertSame('no-store', $response->getHeaderLine('Cache-Control'));

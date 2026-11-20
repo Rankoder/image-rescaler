@@ -5,13 +5,10 @@ declare(strict_types=1);
 namespace App\Infrastructure\Controllers;
 
 use App\Application\Services\InputImages;
-use App\Application\Validation\ValidationFailed;
 use App\Infrastructure\Http\JsonResponses;
 use App\Infrastructure\Http\MultipartRequest;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Log\LoggerInterface;
-use Throwable;
 
 /**
  * GET /images and POST /images: the input directory over HTTP.
@@ -22,7 +19,6 @@ final readonly class ImagesController
         private InputImages $inputImages,
         private JsonResponses $responses,
         private int $postMaxSize,
-        private LoggerInterface $logger,
     ) {}
 
     public function list(): ResponseInterface
@@ -38,16 +34,8 @@ final readonly class ImagesController
             return $unreadable;
         }
 
-        try {
-            $name = $this->inputImages->add($form->file(), $form->field('name'));
+        $name = $this->inputImages->add($form->file(), $form->field('name'));
 
-            return $this->responses->json(201, ['status' => 'success', 'name' => $name]);
-        } catch (ValidationFailed $failure) {
-            return $this->responses->validationFailed($failure->errors);
-        } catch (Throwable $failure) {
-            $this->logger->error('Adding an image failed', ['exception' => $failure]);
-
-            return $this->responses->serverError();
-        }
+        return $this->responses->json(201, ['status' => 'success', 'name' => $name]);
     }
 }

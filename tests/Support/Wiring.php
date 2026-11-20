@@ -12,7 +12,11 @@ use App\Domain\Interfaces\ImageResizer;
 use App\Domain\Interfaces\StorageRegistry;
 use App\Infrastructure\Config\AppConfig;
 use App\Infrastructure\Container;
+use App\Infrastructure\Controllers\FileController;
+use App\Infrastructure\Controllers\HealthController;
 use App\Infrastructure\Controllers\ImageController;
+use App\Infrastructure\Controllers\ImagesController;
+use App\Infrastructure\Http\HttpKernel;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -31,6 +35,27 @@ final class Wiring
         return new Container(self::config());
     }
 
+    public static function httpKernel(
+        ?Container $container = null,
+        ?HealthController $healthController = null,
+        ?ImageController $imageController = null,
+        ?ImagesController $imagesController = null,
+        ?FileController $fileController = null,
+        LoggerInterface $logger = new NullLogger(),
+    ): HttpKernel {
+        $container ??= self::container();
+
+        return new HttpKernel(
+            $healthController ?? $container->healthController(),
+            $imageController ?? $container->imageController(),
+            $imagesController ?? $container->imagesController(),
+            $fileController ?? $container->fileController(),
+            $container->jsonResponses(),
+            $container->httpFactory(),
+            $logger,
+        );
+    }
+
     public static function resizeAndStoreImage(
         ?ImageResizer $resizer = null,
         ?StorageRegistry $storages = null,
@@ -45,7 +70,6 @@ final class Wiring
 
     public static function imageController(
         ?ResizeAndStoreImage $resizeAndStoreImage = null,
-        LoggerInterface $logger = new NullLogger(),
     ): ImageController {
         $container = self::container();
 
@@ -53,7 +77,6 @@ final class Wiring
             $resizeAndStoreImage ?? $container->resizeAndStoreImage(),
             $container->jsonResponses(),
             self::config()->postMaxSize,
-            $logger,
         );
     }
 }

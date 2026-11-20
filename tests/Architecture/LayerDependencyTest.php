@@ -40,7 +40,6 @@ final class LayerDependencyTest
             ->shouldNotDependOn()
             ->classes(
                 Selector::inNamespace('Aws'),
-                Selector::inNamespace('Bramus'),
                 Selector::inNamespace('GuzzleHttp'),
                 Selector::inNamespace('Intervention'),
                 Selector::inNamespace('Kunnu'),

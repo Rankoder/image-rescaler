@@ -34,7 +34,7 @@ The limits these classes check and the error codes they return are part of the H
 - Uses Domain: the ports `ImageInspector`, `ImageLibrary`, `ImageReencoder`, `ImageResizer`, `StorageRegistry`, the value objects and the enums.
 - Forbidden, per `tests/Architecture/LayerDependencyTest.php` (phpat, run by PHPStan):
   - `App\Infrastructure` (`test_application_does_not_depend_on_infrastructure`),
-  - packages that do I/O: `Aws`, `Bramus`, `GuzzleHttp`, `Intervention`, `Kunnu`, `Nyholm`, `Psr\Http` (`test_application_reaches_the_outside_world_only_through_adapters`),
+  - packages that do I/O: `Aws`, `GuzzleHttp`, `Intervention`, `Kunnu`, `Nyholm`, `Psr\Http` (`test_application_reaches_the_outside_world_only_through_adapters`),
   - a class implementing a `App\Domain\Interfaces` port, since that makes it an adapter (`test_application_holds_no_adapter`),
   - a class named `*Controller` or `*Command` (`test_application_holds_no_entry_point`).
 - Calls to I/O functions are outside the rules' reach and stay with code review.

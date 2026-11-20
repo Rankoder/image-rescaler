@@ -22,6 +22,7 @@ use App\Infrastructure\Controllers\HealthController;
 use App\Infrastructure\Controllers\ImageController;
 use App\Infrastructure\Controllers\ImagesController;
 use App\Infrastructure\Controllers\NotFoundController;
+use App\Infrastructure\Http\HttpKernel;
 use App\Infrastructure\Http\JsonResponses;
 use App\Infrastructure\Image\InterventionImageReencoder;
 use App\Infrastructure\Image\InterventionImageResizer;
@@ -57,6 +58,19 @@ final readonly class Container
         return $this->httpFactory;
     }
 
+    public function httpKernel(): HttpKernel
+    {
+        return new HttpKernel(
+            $this->healthController(),
+            $this->imageController(),
+            $this->imagesController(),
+            $this->fileController(),
+            $this->jsonResponses(),
+            $this->httpFactory,
+            $this->logger(),
+        );
+    }
+
     public function healthController(): HealthController
     {
         return new HealthController($this->httpFactory, $this->httpFactory);
@@ -83,7 +97,6 @@ final readonly class Container
             $this->resizeAndStoreImage(),
             $this->jsonResponses(),
             $this->config->postMaxSize,
-            $this->logger(),
         );
     }
 
@@ -98,7 +111,6 @@ final readonly class Container
             ),
             $this->jsonResponses(),
             $this->config->postMaxSize,
-            $this->logger(),
         );
     }
 

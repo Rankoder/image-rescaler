@@ -5,19 +5,19 @@ declare(strict_types=1);
 namespace Tests\Contract;
 
 use App\Infrastructure\Controllers\FileController;
-use App\Infrastructure\Controllers\NotFoundController;
-use App\Infrastructure\Http\JsonResponses;
-use Nyholm\Psr7\Factory\Psr17Factory;
+use App\Infrastructure\Http\HttpKernel;
+use Nyholm\Psr7\ServerRequest;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Tests\Support\TestFiles;
+use Tests\Support\Wiring;
 
 final class FilesContractTest extends TestCase
 {
     use MatchesContract;
 
     private TestFiles $storage;
-    private FileController $controller;
+    private HttpKernel $kernel;
     private string $stored;
 
     protected function setUp(): void
@@ -25,27 +25,36 @@ final class FilesContractTest extends TestCase
         $this->storage = new TestFiles();
         $this->stored = $this->storage->jpeg(60, 40, 'thumb_v1.jpg');
         mkdir($this->storage->directory() . '/input');
+        $this->storage->withContent('nested', 'input/landscape.jpg');
         $this->storage->withContent('not served', 'notes.txt');
         $this->storage->withContent('partial', '.0123456789abcdef-thumb_v1.jpg');
 
-        $factory = new Psr17Factory();
-        $this->controller = new FileController(
-            $this->storage->directory(),
-            $factory,
-            $factory,
-            new NotFoundController(new JsonResponses($factory, $factory)),
+        $container = Wiring::container();
+        $factory = $container->httpFactory();
+        $this->kernel = Wiring::httpKernel(
+            container: $container,
+            fileController: new FileController(
+                $this->storage->directory(),
+                $factory,
+                $factory,
+                $container->notFoundController(),
+            ),
         );
     }
 
     protected function tearDown(): void
     {
+        $nested = $this->storage->directory() . '/input/landscape.jpg';
+        if (is_file($nested)) {
+            unlink($nested);
+        }
         rmdir($this->storage->directory() . '/input');
         $this->storage->remove();
     }
 
     public function testServesAStoredImageWithItsType(): void
     {
-        $response = $this->controller->show('thumb_v1.jpg');
+        $response = $this->kernel->handle(new ServerRequest('GET', '/files/thumb_v1.jpg'));
 
         $this->assertSame([200, 'image/jpeg'], [$response->getStatusCode(), $response->getHeaderLine('Content-Type')]);
         $this->assertStringEqualsFile($this->stored, (string) $response->getBody());
@@ -60,6 +69,14 @@ final class FilesContractTest extends TestCase
         yield 'missing file' => ['missing.jpg'];
         yield 'input directory' => ['input'];
         yield 'parent directory' => ['../README.md'];
+        yield 'encoded traversal' => ['..%2F..%2Fetc%2Fpasswd'];
+        yield 'encoded subdirectory' => ['input%2Flandscape.jpg'];
+        yield 'dot-dot' => ['..'];
+        yield 'dotenv' => ['.env'];
+        yield 'null byte' => ['thumb.jpg%00.png'];
+        yield 'encoded trailing newline' => ['thumb.jpg%0A'];
+        yield 'raw trailing newline' => ["thumb_v1.jpg\n"];
+        yield 'over 200 characters' => [str_repeat('a', 201) . '.jpg'];
         yield 'other extension' => ['notes.txt'];
         yield 'partial file' => ['.0123456789abcdef-thumb_v1.jpg'];
     }
@@ -67,13 +84,8 @@ final class FilesContractTest extends TestCase
     #[DataProvider('namesNotServed')]
     public function testAnythingElseIsNotFound(string $name): void
     {
-        $response = $this->controller->show($name);
+        $response = $this->kernel->handle(new ServerRequest('GET', '/files/' . $name));
 
-        $this->assertSame(404, $response->getStatusCode());
-        $this->assertSame(
-            '{"status":"error","errors":[{"field":null,"code":"not_found","message":"Not found."}]}',
-            (string) $response->getBody(),
-        );
-        $this->assertMatchesContract('get', '/files/{name}', $response);
+        $this->assertErrors(404, [[null, 'not_found']], 'get', '/files/{name}', $response);
     }
 }

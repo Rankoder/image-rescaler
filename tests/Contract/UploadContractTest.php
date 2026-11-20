@@ -7,7 +7,6 @@ namespace Tests\Contract;
 use App\Domain\Interfaces\StorageRegistry;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
-use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\ServerRequest;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -124,19 +123,18 @@ final class UploadContractTest extends TestCase
 
     public function testARequestThatIsNotMultipartIsMalformed(): void
     {
-        $request = (new ServerRequest('POST', '/upload', ['Content-Type' => 'application/json']))
-            ->withParsedBody(['max_width' => '60', 'max_height' => '40']);
+        $request = $this->multipartRequest('/upload', fields: ['max_width' => '60', 'max_height' => '40'], contentType: 'application/json');
 
-        $response = Wiring::imageController()->upload($request);
+        $response = Wiring::httpKernel()->handle($request);
 
-        $this->assertErrors(400, [[null, 'malformed_request']], $response);
+        $this->assertErrors(400, [[null, 'malformed_request']], 'post', '/upload', $response);
     }
 
     public function testMissingRequiredFieldsAreAllReportedAtOnce(): void
     {
         $response = $this->send(new ServerRequest('POST', '/upload', ['Content-Type' => self::MULTIPART]));
 
-        $this->assertErrors(422, [['file', 'required'], ['max_width', 'required'], ['max_height', 'required']], $response);
+        $this->assertErrors(422, [['file', 'required'], ['max_width', 'required'], ['max_height', 'required']], 'post', '/upload', $response);
     }
 
     /**
@@ -175,7 +173,7 @@ final class UploadContractTest extends TestCase
 
         $response = $this->upload($source, $clientFilename, ['max_width' => '60', 'max_height' => '40']);
 
-        $this->assertErrors(422, [['file', $code]], $response);
+        $this->assertErrors(422, [['file', $code]], 'post', '/upload', $response);
         $this->assertSame([], StoredFiles::matching($this->outputName));
     }
 
@@ -183,7 +181,7 @@ final class UploadContractTest extends TestCase
     {
         $response = $this->upload($this->files->jpeg(150, 150), 'photo.jpg', ['max_width' => '60', 'max_height' => '40'], UPLOAD_ERR_INI_SIZE);
 
-        $this->assertErrors(422, [['file', 'too_large']], $response);
+        $this->assertErrors(422, [['file', 'too_large']], 'post', '/upload', $response);
     }
 
     public function testARequestOverThePhpPostLimitIsTooLargeRatherThanMissingEverything(): void
@@ -194,7 +192,7 @@ final class UploadContractTest extends TestCase
             'Content-Length' => (string) (Wiring::config()->postMaxSize + 1),
         ]);
 
-        $this->assertErrors(422, [['file', 'too_large']], $this->send($request));
+        $this->assertErrors(422, [['file', 'too_large']], 'post', '/upload', $this->send($request));
     }
 
     /**
@@ -211,7 +209,7 @@ final class UploadContractTest extends TestCase
     {
         $response = $this->upload($this->files->jpeg(150, 150), 'photo.jpg', ['max_width' => $value, 'max_height' => '40']);
 
-        $this->assertErrors(422, [['max_width', $code]], $response);
+        $this->assertErrors(422, [['max_width', $code]], 'post', '/upload', $response);
     }
 
     #[DataProvider('rejectedFrameSides')]
@@ -219,7 +217,7 @@ final class UploadContractTest extends TestCase
     {
         $response = $this->upload($this->files->jpeg(150, 150), 'photo.jpg', ['max_width' => '60', 'max_height' => $value]);
 
-        $this->assertErrors(422, [['max_height', $code]], $response);
+        $this->assertErrors(422, [['max_height', $code]], 'post', '/upload', $response);
     }
 
     public function testAcceptsTheFrameLimits(): void
@@ -251,7 +249,7 @@ final class UploadContractTest extends TestCase
             'output_filename' => $outputFilename,
         ]);
 
-        $this->assertErrors(422, [['output_filename', $code]], $response);
+        $this->assertErrors(422, [['output_filename', $code]], 'post', '/upload', $response);
     }
 
     public function testRejectsAnUnsupportedService(): void
@@ -262,7 +260,7 @@ final class UploadContractTest extends TestCase
             'service' => 'ftp',
         ]);
 
-        $this->assertErrors(422, [['service', 'unsupported']], $response);
+        $this->assertErrors(422, [['service', 'unsupported']], 'post', '/upload', $response);
     }
 
     public function testErrorsOfDifferentFieldsComeTogether(): void
@@ -280,7 +278,7 @@ final class UploadContractTest extends TestCase
             ['max_height', 'not_integer'],
             ['service', 'unsupported'],
             ['output_filename', 'invalid_characters'],
-        ], $response);
+        ], 'post', '/upload', $response);
     }
 
     public function testAStorageFailureReturnsTheErrorEnvelope(): void
@@ -300,30 +298,27 @@ final class UploadContractTest extends TestCase
                 $this->records[] = [$level, (string) $message, $context];
             }
         };
-        $controller = Wiring::imageController(Wiring::resizeAndStoreImage(storages: $storages), $logger);
-
-        $factory = new Psr17Factory();
-        $source = $this->files->jpeg(150, 150);
-        $file = $factory->createUploadedFile(
-            $factory->createStreamFromFile($source),
-            (int) filesize($source),
-            UPLOAD_ERR_OK,
-            'photo.jpg',
+        $kernel = Wiring::httpKernel(
+            imageController: Wiring::imageController(Wiring::resizeAndStoreImage(storages: $storages)),
+            logger: $logger,
         );
-        $request = (new ServerRequest('POST', '/upload', ['Content-Type' => self::MULTIPART]))
-            ->withUploadedFiles(['file' => $file])
-            ->withParsedBody(['max_width' => '60', 'max_height' => '40']);
 
-        $this->assertErrors(500, [[null, 'server_error']], $controller->upload($request));
-        $this->assertSame([['error', 'Upload failed', ['exception' => $failure]]], $logger->records);
+        $request = $this->multipartRequest(
+            '/upload',
+            ['file' => $this->uploadedFile($this->files->jpeg(150, 150), 'photo.jpg')],
+            ['max_width' => '60', 'max_height' => '40'],
+        );
+
+        $this->assertErrors(500, [[null, 'server_error']], 'post', '/upload', $kernel->handle($request));
+        $this->assertSame([['error', 'Request failed', ['exception' => $failure]]], $logger->records);
     }
 
     public function testMethodNotAllowedResponseMatchesTheContract(): void
     {
-        $response = Wiring::container()->jsonResponses()->methodNotAllowed();
+        $response = Wiring::httpKernel()->handle(new ServerRequest('PUT', '/upload'));
 
         $this->assertSame('GET, POST, HEAD', $response->getHeaderLine('Allow'));
-        $this->assertErrors(405, [[null, 'method_not_allowed']], $response);
+        $this->assertErrors(405, [[null, 'method_not_allowed']], 'post', '/upload', $response);
     }
 
     /**
@@ -336,59 +331,24 @@ final class UploadContractTest extends TestCase
         int $uploadError = UPLOAD_ERR_OK,
         bool $withOutputFilename = true,
     ): ResponseInterface {
-        $factory = new Psr17Factory();
-        $file = $factory->createUploadedFile(
-            $factory->createStreamFromFile($source),
-            (int) filesize($source),
-            $uploadError,
-            $clientFilename,
-        );
-
         $defaults = $withOutputFilename
             ? ['service' => 'local', 'output_filename' => $this->outputName]
             : ['service' => 'local'];
 
-        $request = (new ServerRequest('POST', '/upload', ['Content-Type' => self::MULTIPART]))
-            ->withUploadedFiles(['file' => $file])
-            ->withParsedBody($fields + $defaults);
+        $request = $this->multipartRequest(
+            '/upload',
+            ['file' => $this->uploadedFile($source, $clientFilename, $uploadError)],
+            $fields + $defaults,
+        );
 
         return $this->send($request);
     }
 
     private function send(ServerRequest $request): ResponseInterface
     {
-        $response = Wiring::imageController()->upload($request);
+        $response = Wiring::httpKernel()->handle($request);
         $this->assertMatchesContract('post', '/upload', $response);
 
         return $response;
-    }
-
-    /**
-     * @param list<array{?string, string}> $expected field and code of every error
-     */
-    private function assertErrors(int $status, array $expected, ResponseInterface $response): void
-    {
-        $this->assertMatchesContract('post', '/upload', $response);
-        $this->assertSame($status, $response->getStatusCode());
-
-        $errors = $this->json($response)['errors'] ?? null;
-        $this->assertIsArray($errors);
-        $actual = [];
-        foreach ($errors as $error) {
-            $this->assertIsArray($error);
-            $actual[] = [$error['field'] ?? null, $error['code'] ?? null];
-        }
-        $this->assertEqualsCanonicalizing($expected, $actual);
-    }
-
-    /**
-     * @return array<mixed>
-     */
-    private function json(ResponseInterface $response): array
-    {
-        $decoded = json_decode((string) $response->getBody(), true, flags: JSON_THROW_ON_ERROR);
-        $this->assertIsArray($decoded);
-
-        return $decoded;
     }
 }

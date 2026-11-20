@@ -201,7 +201,7 @@ docker compose exec web composer check               # cs, phpstan and test in o
 
 The architecture rules are PHPStan rules from phpat, written as classes in `tests/Architecture`: Domain depends only on itself and PHP's own classes, Application never on Infrastructure or on packages that do I/O, and Application holds no adapter (no class implementing a Domain interface) and no controller or command. Calls to I/O functions (`file_put_contents`, `getenv`) and scripts without a class (`bin/resize`, `routes.php`) are out of their reach and stay with code review.
 
-Unit tests cover single classes, functional tests a service with its external client mocked, integration tests the whole upload through the controller into `storage/`, without mocks. Contract tests send one request per rule of `openapi.yaml` and check every response against it. S3 and Dropbox have no integration tests, since they need real accounts.
+Unit tests cover single classes, functional tests HTTP routing (`HttpKernel`) or a service with its external client mocked, integration tests parallel uploads and the CLI into `storage/`, without mocks. Contract tests send one request per rule of `openapi.yaml` and check every response against it. S3 and Dropbox have no integration tests, since they need real accounts.
 
 Tests take their environment variables from `phpunit.xml`, not from `.env`, and run in random order, so they cannot lean on each other. PHPUnit prints the seed; `docker compose exec web vendor/bin/phpunit --order-by random --random-order-seed <seed>` repeats that order.
 
@@ -225,7 +225,7 @@ src/
 ├── Domain/                enums, value objects and interfaces (ports)
 ├── Application/           the resize use case and its validation
 └── Infrastructure/        Container and AppConfig, HTTP controllers, CLI, storage adapters, image processing
-public/index.php           HTTP entry point → routes.php → controllers (bramus/router)
+public/index.php           HTTP entry point → routes.php → HttpKernel → controllers
 bin/resize                 CLI entry point
 openapi.yaml               API contract
 resources/images/          sample images, copied into storage/input on start

@@ -36,7 +36,6 @@
         "php": "^8.5",
         "ext-gd": "*",
         "aws/aws-sdk-php": "^3.314",
-        "bramus/router": "^1.6",
         "intervention/image": "^4",
         "kunalvarma05/dropbox-php-sdk": "^0.4.2",
         "nyholm/psr7": "^1.8",
