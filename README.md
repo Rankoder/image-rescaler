@@ -2,6 +2,30 @@
 
 A plain-PHP REST API and CLI tool that crops an image to a thumbnail of exactly the requested size and stores it in the chosen storage: local filesystem, Amazon S3 or Dropbox.
 
+## How this was built
+
+I wrote the first version myself in two days in June 2024, as a recruitment task.
+
+In November 2026 the whole rebuild was done by AI agents from two vendors (Claude Code and
+Antigravity), running side by side. My part was to hand out tasks, refine them with the agents
+before work started, and accept the results. Everything in between was agents only: a
+coordinator handing out the work, a coding agent writing it, a QA reviewer and an architecture
+reviewer checking it, and the coding agent merging after approval. What began as one agent
+writing and one reviewing grew into this team within days. In five days they produced
+33 pull requests and about 130 commits.
+
+Afterwards I skimmed all the reviews to see what actually paid off:
+
+- The real findings, including security ones (path traversal, secrets in logs, GPS data kept in
+  uploaded images), came from trying to break the running application, not from reading the code.
+- Reviews that checked the code against the contract found less and less, and some of them added
+  complexity instead of removing it.
+- None of the agents asked whether something was needed or could be simpler. That judgement
+  stayed with me.
+
+What I keep from it: agents are fast at doing the task; deciding what the task should be, and
+when the result is too much, is still the human's job.
+
 ## Requirements
 
 - Docker with Compose v2 (`docker compose`)
